@@ -9,7 +9,7 @@ try:
     import wandb
 except ImportError:
     wandb = None
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from typing import List
 import torch.utils.data as utils
 from components import LRScheduler
@@ -79,6 +79,8 @@ class Train:
         self.optimizers = optimizers
         self.lr_schedulers = lr_schedulers
         self.save_path = Path(cfg.log_path) / cfg.unique_id
+        self.save_path.mkdir(exist_ok=True, parents=True)
+        OmegaConf.save(self.config, self.save_path / "config.yaml")
         self.save_learnable_graph = cfg.save_learnable_graph
 
         self.loss = torch.nn.CrossEntropyLoss()
@@ -254,22 +256,18 @@ class Train:
             self.train_per_epoch(self.optimizers[0], self.lr_schedulers[0])
             val_result, val_result1, pred_list_val, pred_list_val1, label_list_val = self.test_per_epoch(self.val_dataloader,
                                             self.val_loss, "val")
-
-            test_result, test_result1, pred_list_test, pred_list_test1, label_list_test = self.test_per_epoch(self.test_dataloader,
-                                            self.test_loss, "test")
             
             vram_mb = torch.cuda.max_memory_allocated() / (1024 ** 2) if torch.cuda.is_available() else 0.0
             self.logger.info(" | ".join([
-                f'Epoch[{epoch}/{self.epochs}]',
+                f'Epoch[{epoch+1}/{self.epochs}]',
                 f'Train Loss:{self.train_loss.avg: .5f}',
                 f'Train Accuracy:{self.train_accuracy.final: .5f}',
-                f'Train Acc:{self.train_mse: .5f}',
                 f'Val Loss:{self.val_loss.avg: .5f}',
                 f'Val Accuracy:{self.val_accuracy.final: .5f}',
-                f'Val Acc:{self.val_mse: .5f}',
-                f'Test Loss:{self.test_loss.avg: .5f}',
-                f'Test Accuracy:{self.test_accuracy.final: .5f}',
-                f'Test Acc:{self.test_mse: .5f}',
+                f'Val SPE:{val_result[1]: .5f}',
+                f'Val SEN:{val_result[2]: .5f}',
+                f'Val F1:{val_result[3]: .5f}',
+                f'Val AUC:{val_result[4]: .5f}',
                 f'Peak VRAM: {vram_mb:.1f} MB',
             ]))
 
@@ -279,25 +277,16 @@ class Train:
                 best_val_epoch = epoch
                 best_epoch_metrics = {
                     "Epoch": epoch,
-
-                    'Train Loss': self.train_loss.avg,
-                    'Train Accuracy': self.train_accuracy.final,
-
-                    'Val Loss': self.val_loss.avg,
-                    'Val Accuracy': self.val_accuracy.final,
-                    "Val SPE": val_result[1],
-                    "Val SEN": val_result[2],
-                    "Val F1": val_result[3],
-                    "Val AUC": val_result[4],
-
-                    'Test Loss': self.test_loss.avg,
-                    'Test Accuracy': self.test_accuracy.final,
-                    "Test SPE": test_result[1],
-                    "Test SEN": test_result[2],
-                    "Test F1": test_result[3],
-                    "Test AUC": test_result[4],
+                    'Train Loss': float(self.train_loss.avg),
+                    'Train Accuracy': float(self.train_accuracy.final),
+                    'Val Loss': float(self.val_loss.avg),
+                    'Val Accuracy': float(self.val_accuracy.final),
+                    "Val SPE": float(val_result[1]),
+                    "Val SEN": float(val_result[2]),
+                    "Val F1": float(val_result[3]),
+                    "Val AUC": float(val_result[4]),
                 }
-                # Save checkpoint when validation accuracy improves
+                # Save best checkpoint strictly on validation improvement
                 self.save_result(best_epoch_metrics, epoch)
 
             if wandb is not None and getattr(wandb, 'run', None) is not None:
@@ -306,53 +295,87 @@ class Train:
 
             training_process.append({
                 "Epoch": epoch,
-
-                "Train Loss": self.train_loss.avg,
-                "Train Accuracy": self.train_accuracy.final,
-                "Val Loss": self.val_loss.avg,
-                "Val Accuracy": self.val_accuracy.final,
-                "Test Loss": self.test_loss.avg,
-                "Test Accuracy": self.test_accuracy.final,
-                "Test SPE": test_result[1],
-                "Test SEN": test_result[2],
-                "Test F1": test_result[3],
-                "Test AUC": test_result[4],
+                "Train Loss": float(self.train_loss.avg),
+                "Train Accuracy": float(self.train_accuracy.final),
+                "Val Loss": float(self.val_loss.avg),
+                "Val Accuracy": float(self.val_accuracy.final),
+                "Val SPE": float(val_result[1]),
+                "Val SEN": float(val_result[2]),
+                "Val F1": float(val_result[3]),
+                "Val AUC": float(val_result[4]),
             })
 
-            # Early stopping check
+            # Early stopping check (enforced strictly on validation accuracy)
             if early_stopping_patience is not None and (epoch - best_val_epoch) >= early_stopping_patience:
-                self.logger.info(f"Early stopping triggered at epoch {epoch}: No validation improvement for {early_stopping_patience} epochs (best epoch: {best_val_epoch}, best val acc: {max_val_accuracy:.4f}).")
+                self.logger.info(f"Early stopping triggered at epoch {epoch+1}: No validation improvement for {early_stopping_patience} consecutive epochs (best epoch: {best_val_epoch+1}, best val acc: {max_val_accuracy:.4f}).")
                 break
 
         # Save final epoch model separately
         self.save_path.mkdir(exist_ok=True, parents=True)
         torch.save(self.model.state_dict(), self.save_path / "final_epoch_model.pt")
+        json.dump(training_process, open(self.save_path / "epoch_history.json", "w"), indent=2)
 
-        test_at_best_val = [
-            best_epoch_metrics.get('Test Accuracy', test_result[0]),
-            best_epoch_metrics.get('Test SPE', test_result[1]),
-            best_epoch_metrics.get('Test SEN', test_result[2]),
-            best_epoch_metrics.get('Test F1', test_result[3]),
-            best_epoch_metrics.get('Test AUC', test_result[4]),
-        ]
+        # -------------------------------------------------------------
+        # POST-TRAINING HELD-OUT TEST EVALUATION (After Checkpoint Selection)
+        # The test set is evaluated ONLY now using the saved checkpoints.
+        # -------------------------------------------------------------
+        self.logger.info(f"=== HELD-OUT TEST EVALUATION (Best Model from Epoch {best_val_epoch+1}) ===")
+        best_model_path = self.save_path / "best_model.pt"
+        if best_model_path.exists():
+            self.model.load_state_dict(torch.load(best_model_path))
+        self.test_loss.reset()
+        _, _, pred_list_test, _, label_list_test = self.test_per_epoch(
+            self.test_dataloader, self.test_loss, "test"
+        )
+        test_metrics_best = calculate_metrics(pred_list_test, label_list_test, return_dict=True)
+        self.logger.info("Best Validation Model on Held-Out Test Set: " + " | ".join([
+            f"Test Loss: {self.test_loss.avg:.5f}",
+            f"ACC: {test_metrics_best['accuracy']*100:.2f}%",
+            f"BACC: {test_metrics_best['balanced_accuracy']*100:.2f}%",
+            f"SPE: {test_metrics_best['specificity']*100:.2f}%",
+            f"SEN: {test_metrics_best['sensitivity']*100:.2f}%",
+            f"F1: {test_metrics_best['f1']*100:.2f}%",
+            f"AUC: {test_metrics_best['auc']*100:.2f}%",
+        ]))
+        self.logger.info(f"Test Confusion Matrix (Best Model): {test_metrics_best['confusion_matrix']}")
+
+        # Evaluate Final Epoch Model for comparison
+        self.logger.info(f"=== HELD-OUT TEST EVALUATION (Final Epoch Model) ===")
+        self.model.load_state_dict(torch.load(self.save_path / "final_epoch_model.pt"))
+        self.test_loss.reset()
+        _, _, final_pred_test, _, final_label_test = self.test_per_epoch(
+            self.test_dataloader, self.test_loss, "test"
+        )
+        test_metrics_final = calculate_metrics(final_pred_test, final_label_test, return_dict=True)
+        self.logger.info("Final Epoch Model on Held-Out Test Set: " + " | ".join([
+            f"Test Loss: {self.test_loss.avg:.5f}",
+            f"ACC: {test_metrics_final['accuracy']*100:.2f}%",
+            f"BACC: {test_metrics_final['balanced_accuracy']*100:.2f}%",
+            f"SPE: {test_metrics_final['specificity']*100:.2f}%",
+            f"SEN: {test_metrics_final['sensitivity']*100:.2f}%",
+            f"F1: {test_metrics_final['f1']*100:.2f}%",
+            f"AUC: {test_metrics_final['auc']*100:.2f}%",
+        ]))
 
         final = {
             'seed': self.config.get('seed'),
-            'best_val_epoch': best_val_epoch,
+            'best_val_epoch': best_val_epoch + 1,
             'best_val_metrics': best_epoch_metrics,
-            'test_at_best_val': {
-                'ACC': float(test_at_best_val[0]),
-                'SPE': float(test_at_best_val[1]),
-                'SEN': float(test_at_best_val[2]),
-                'F1': float(test_at_best_val[3]),
-                'AUC': float(test_at_best_val[4]),
-            },
-            'test_last_epoch': dict(zip(['ACC', 'SPE', 'SEN', 'F1', 'AUC'], map(float, test_result))),
+            'test_at_best_val': test_metrics_best,
+            'test_at_final_epoch': test_metrics_final,
             'model': {k: self.config.model.get(k) for k in (
                  'reliability_fusion', 'dynamic_dim', 'min_dim', 'nested_dropout', 'edl_weight')},
             'training': dict(self.config.training),
         }
-        if self.config.training.get('robustness_eval', True):
+        if self.config.training.get('robustness_eval', False):
+            self.model.load_state_dict(torch.load(best_model_path))
             final['robustness'] = self.robustness()
-        json.dump(final, open(self.save_path / 'final.json', 'w'), indent=1, default=float)
-        return test_at_best_val
+        json.dump(final, open(self.save_path / 'final.json', 'w'), indent=2, default=float)
+        
+        return [
+            test_metrics_best['accuracy'],
+            test_metrics_best['specificity'],
+            test_metrics_best['sensitivity'],
+            test_metrics_best['f1'],
+            test_metrics_best['auc'],
+        ]
