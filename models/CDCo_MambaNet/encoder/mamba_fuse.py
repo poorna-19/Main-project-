@@ -108,74 +108,71 @@ class Mamba_fusion(nn.Module):
     
 
     def fuse_method(self, fmri, smri):
-        fuse_feature = torch.cat((smri, fmri), dim=1)
+        # Consistent modality ordering: (fmri, smri)
+        fuse_feature = torch.cat((fmri, smri), dim=1)
         fuse_feature = self.mamba_r3(fuse_feature)
 
         smri_y, smri_z = self.mamba_r1(smri)
         fmri_y, fmri_z = self.mamba_r2(fmri)
         fmri_fuse = (fmri_y * smri_z)
         smri_fuse = (smri_y * fmri_z)
+        # Consistent modality ordering: (fmri_fuse, smri_fuse)
         sf_feature_o = torch.cat((fmri_fuse, smri_fuse), dim=1)
 
-        # 对比扰动不考虑cls_token
-        fmri_cls_token = fmri[:,0,:].unsqueeze(1)
-        fmri_feature = fmri[:,1:,:]
-        random_noise_f = torch.rand_like(fmri_feature)
-        fmri_feature = fmri_feature + torch.sign(fmri_feature) * F.normalize(random_noise_f)
-        fmri_rc = torch.cat((fmri_cls_token, fmri_feature), dim=1)
+        # Contrastive perturbation only computed during training
+        if self.training:
+            fmri_cls_token = fmri[:,0,:].unsqueeze(1)
+            fmri_feature = fmri[:,1:,:]
+            random_noise_f = torch.rand_like(fmri_feature)
+            fmri_feature = fmri_feature + torch.sign(fmri_feature) * F.normalize(random_noise_f)
+            fmri_rc = torch.cat((fmri_cls_token, fmri_feature), dim=1)
 
-        smri_cls_token = smri[:,0,:].unsqueeze(1)
-        smri_feature = smri[:,1:,:]
-        random_noise_s = torch.rand_like(smri_feature)
-        smri_feature = smri_feature + torch.sign(smri_feature) * F.normalize(random_noise_s)
-        smri_rc = torch.cat((smri_cls_token, smri_feature), dim=1)
+            smri_cls_token = smri[:,0,:].unsqueeze(1)
+            smri_feature = smri[:,1:,:]
+            random_noise_s = torch.rand_like(smri_feature)
+            smri_feature = smri_feature + torch.sign(smri_feature) * F.normalize(random_noise_s)
+            smri_rc = torch.cat((smri_cls_token, smri_feature), dim=1)
 
-        smri_y, smri_z = self.mamba_r1(smri_rc)
-        fmri_y, fmri_z = self.mamba_r2(fmri_rc)
-        fmri_fuse = (fmri_y * smri_z)
-        smri_fuse = (smri_y * fmri_z)
-        sf_feature = torch.cat((fmri_fuse, smri_fuse), dim=1)
+            smri_y_rc, smri_z_rc = self.mamba_r1(smri_rc)
+            fmri_y_rc, fmri_z_rc = self.mamba_r2(fmri_rc)
+            fmri_fuse_rc = (fmri_y_rc * smri_z_rc)
+            smri_fuse_rc = (smri_y_rc * fmri_z_rc)
+            sf_feature = torch.cat((fmri_fuse_rc, smri_fuse_rc), dim=1)
+            r_loss = self.sl1.sf_loss(sf_feature_o, sf_feature)
+        else:
+            r_loss = torch.tensor(0.0, device=fmri.device)
 
-        # 对比扰动添加cls_token
-        # random_noise_f = torch.rand_like(fmri).cuda()
-        # fmri_r = fmri + torch.sign(fmri) * F.normalize(random_noise_f)
-        # random_noise_s = torch.rand_like(smri).cuda()
-        # smri_r = smri + torch.sign(smri) * F.normalize(random_noise_s)
-
-        # smri_y, smri_z = self.mamba_r1(smri_r)
-        # fmri_y, fmri_z = self.mamba_r2(fmri_r)
-        # fmri_fuse = (fmri_y * smri_z)
-        # smri_fuse = (smri_y * fmri_z)
-        # sf_feature = torch.cat((fmri_fuse, smri_fuse), dim=1)
-
-        r_loss = self.sl1.sf_loss(sf_feature_o, sf_feature)
-        # r_loss = 0
         fuse = self.predictor(sf_feature_o + fuse_feature)
-
         return fuse, r_loss
 
     def fuse_method1(self, fmri, smri):
-        fuse_feature = torch.cat((smri, fmri), dim=1)
+        # Consistent modality ordering: (fmri, smri)
+        fuse_feature = torch.cat((fmri, smri), dim=1)
         fuse_feature = self.mamba_r3(fuse_feature)
 
         smri_y, smri_z = self.mamba_r1(smri)
         fmri_y, fmri_z = self.mamba_r2(fmri)
         fmri_fuse = (fmri_y * smri_z)
         smri_fuse = (smri_y * fmri_z)
+        # Consistent modality ordering: (fmri_fuse, smri_fuse)
         sf_feature_o = torch.cat((fmri_fuse, smri_fuse), dim=1)
 
-        random_noise_f = torch.rand_like(fmri)
-        fmri = fmri + torch.sign(fmri) * F.normalize(random_noise_f)
-        random_noise_s = torch.rand_like(smri)
-        smri = smri + torch.sign(smri) * F.normalize(random_noise_s)
-        smri_y, smri_z = self.mamba_r1(smri)
-        fmri_y, fmri_z = self.mamba_r2(fmri)
-        fmri_fuse = (fmri_y * smri_z)
-        smri_fuse = (smri_y * fmri_z)
-        sf_feature = torch.cat((fmri_fuse, smri_fuse), dim=1)
-        r_loss = self.sl1.sf_loss(sf_feature_o, sf_feature)
-        # r_loss = 0
-        fuse = self.predictor(sf_feature + fuse_feature)
+        # Random noise perturbation applied ONLY during training, never during evaluation
+        if self.training:
+            random_noise_f = torch.rand_like(fmri)
+            fmri_noisy = fmri + torch.sign(fmri) * F.normalize(random_noise_f)
+            random_noise_s = torch.rand_like(smri)
+            smri_noisy = smri + torch.sign(smri) * F.normalize(random_noise_s)
+            smri_y_n, smri_z_n = self.mamba_r1(smri_noisy)
+            fmri_y_n, fmri_z_n = self.mamba_r2(fmri_noisy)
+            fmri_fuse_n = (fmri_y_n * smri_z_n)
+            smri_fuse_n = (smri_y_n * fmri_z_n)
+            sf_feature = torch.cat((fmri_fuse_n, smri_fuse_n), dim=1)
+            r_loss = self.sl1.sf_loss(sf_feature_o, sf_feature)
+            fuse = self.predictor(sf_feature + fuse_feature)
+        else:
+            r_loss = torch.tensor(0.0, device=fmri.device)
+            fuse = self.predictor(sf_feature_o + fuse_feature)
 
         return fuse, r_loss
 

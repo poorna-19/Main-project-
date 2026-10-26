@@ -5,7 +5,10 @@ import numpy as np
 from pathlib import Path
 import torch.nn.functional as F
 from utils import continus_mixup_data
-import wandb
+try:
+    import wandb
+except ImportError:
+    wandb = None
 from omegaconf import DictConfig
 from typing import List
 import torch.utils.data as utils
@@ -130,39 +133,64 @@ class Train:
         pred_list = []
         pred_list1 = []
         label_list = []
-        for fMRI_Feature, fMRI_Con, label, sMRI_Feature in self.train_dataloader:
+        device = next(self.model.parameters()).device
+        accum_steps = max(1, self.config.training.get('accumulate_grad_batches', 1))
+        optimizer.zero_grad()
+        num_batches = len(self.train_dataloader)
+
+        for batch_idx, (fMRI_Feature, fMRI_Con, label, sMRI_Feature) in enumerate(self.train_dataloader):
             self.current_step += 1
             lr_scheduler.update(optimizer=optimizer, step=self.current_step)
-            fMRI_Feature, fMRI_Con, label, sMRI_Feature = fMRI_Feature.cuda(), fMRI_Con.cuda(), label.cuda(), sMRI_Feature.cuda()
-            # Upstream mixed only fMRI_Con (unused by the model), so labels were mixed while inputs were not.
-            fMRI_Feature, sMRI_Feature, label = continus_mixup_data(fMRI_Feature, sMRI_Feature, y=label)
+            fMRI_Feature = fMRI_Feature.to(device)
+            fMRI_Con = fMRI_Con.to(device)
+            label = label.to(device)
+            sMRI_Feature = sMRI_Feature.to(device)
+            
+            # Configurable mixup (can be disabled or set to mild alpha)
+            if self.config.preprocess.get('continus', False):
+                alpha = self.config.preprocess.get('alpha', 0.2)
+                fMRI_Feature, sMRI_Feature, label = continus_mixup_data(
+                    fMRI_Feature, sMRI_Feature, y=label, alpha=alpha, device=str(device)
+                )
+
             fMRI_Feature, sMRI_Feature, avail = self.corrupt(fMRI_Feature, sMRI_Feature)
-            predict, predict1= self.model(fMRI_Feature, fMRI_Con, sMRI_Feature, avail)
+            predict, predict1 = self.model(fMRI_Feature, fMRI_Con, sMRI_Feature, avail)
             loss = self.model.loss_function(predict, label, predict1)
 
             self.train_loss.update_with_weight_loss(loss.item(), label.shape[0])
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            pred_list.extend(predict1.tolist())
-            pred_list1.extend(predict.tolist())
+            # Gradient accumulation for low-VRAM GPUs (e.g., 2 GB MX450)
+            loss_scaled = loss / accum_steps
+            loss_scaled.backward()
+
+            if (batch_idx + 1) % accum_steps == 0 or (batch_idx + 1) == num_batches:
+                optimizer.step()
+                optimizer.zero_grad()
+
+            # Primary clean head in pred_list, secondary in pred_list1
+            pred_list.extend(predict.tolist())
+            pred_list1.extend(predict1.tolist())
             label_list.extend(label.tolist())
 
         self.train_accuracy.update_with_weight_acc(pred_list, label_list)
         self.train_accuracy1, _, _, _, _ = calculate_metrics(pred_list, label_list)
         self.train_mse, _, _, _, _ = calculate_metrics(pred_list1, label_list)
 
-    @torch.no_grad()  # upstream built autograd graphs during evaluation; outputs are unchanged
+    @torch.no_grad()
     def test_per_epoch(self, dataloader, loss_meter, str_select):
         labels = []
         result = []
         label_list = []
         pred_list = []
         pred_list1 = []
+        device = next(self.model.parameters()).device
         self.model.eval()
         for fMRI_Feature, fMRI_Con, label, sMRI_Feature in dataloader:
-            fMRI_Feature, fMRI_Con, label, sMRI_Feature = fMRI_Feature.cuda(), fMRI_Con.cuda(), label.cuda(), sMRI_Feature.cuda()
+            fMRI_Feature = fMRI_Feature.to(device)
+            fMRI_Con = fMRI_Con.to(device)
+            label = label.to(device)
+            sMRI_Feature = sMRI_Feature.to(device)
+
             output, output1 = self.model(fMRI_Feature, fMRI_Con, sMRI_Feature)
             label = label.float()
             loss = self.model.loss_function(output, label, output1)
@@ -171,11 +199,11 @@ class Train:
             result += F.softmax(output, dim=1)[:, 1].tolist()
             labels += label[:, 1].tolist()
 
-            pred_list.extend(output1.tolist())
-            pred_list1.extend(output.tolist())
+            # Primary clean head is evaluated as main metric (pred_list)
+            pred_list.extend(output.tolist())
+            pred_list1.extend(output1.tolist())
 
             label_list.extend(label.tolist())
-
 
         if str_select == "val":
             self.val_accuracy.update_with_weight_acc(pred_list, label_list)
@@ -251,8 +279,9 @@ class Train:
                 }
 
             self.save_result(best_epoch_metrics, epoch)
-            wandb.run.summary['Max Test Accuracy'] = max_test_accuracy
-            wandb.run.summary.update(best_epoch_metrics)
+            if wandb is not None and getattr(wandb, 'run', None) is not None:
+                wandb.run.summary['Max Test Accuracy'] = max_test_accuracy
+                wandb.run.summary.update(best_epoch_metrics)
 
             training_process.append({
                 "Epoch": epoch,

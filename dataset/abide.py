@@ -16,8 +16,11 @@ def load_abide_data(cfg: DictConfig):
     smri = data["smri"]
     site = data["site"]
 
-    scaler = StandardScaler(mean=np.mean(final_timeseires), std=np.std(final_timeseires))
-    final_timeseires = scaler.transform(final_timeseires)
+    # Per-subject/per-ROI z-score normalization to ensure zero cross-subject data leakage
+    mean_sub = np.mean(final_timeseires, axis=-1, keepdims=True)
+    std_sub = np.std(final_timeseires, axis=-1, keepdims=True)
+    std_sub[std_sub == 0] = 1.0
+    final_timeseires = (final_timeseires - mean_sub) / std_sub
 
     final_timeseires, final_pearson = [torch.from_numpy(
         data).float() for data in (final_timeseires, final_pearson)]

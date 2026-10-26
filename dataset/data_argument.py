@@ -10,7 +10,7 @@ import random
 
 
 class Dropout(nn.Module):
-    def __init__(self, p_zero=0.5):
+    def __init__(self, p_zero=0.1):
         super(Dropout, self).__init__()
         self.p_zero = p_zero
 
@@ -19,12 +19,16 @@ class Dropout(nn.Module):
             return x_t
         num_dim1, num_dim2 = x_t.size()
         num_drop = int(num_dim1 * self.p_zero)
-        drop_indices = np.random.choice(num_dim1, num_drop, replace=False)
-        x_t[drop_indices, :] = 0
+        if num_drop > 0:
+            drop_indices = np.random.choice(num_dim1, num_drop, replace=False)
+            # Add small low-amplitude noise instead of hard zeros to prevent complete connectome obliteration
+            x_t[drop_indices, :] = 1e-4 * torch.randn(num_drop, num_dim2, dtype=x_t.dtype, device=x_t.device)
         return x_t
 
 
-def random_rotate_3d(tensor, angles_range=(-180, 180)):
+def random_rotate_3d(tensor, angles_range=(-8, 8)):
+    """Anatomically plausible subtle 3D rotations for MNI-aligned brain volumes.
+    Prevents upside-down or inverted brain orientations."""
     angle_x = random.uniform(*angles_range)
     angle_y = random.uniform(*angles_range)
     angle_z = random.uniform(*angles_range)
@@ -83,13 +87,15 @@ def data_aug(time, pc, label, smri, cache):
             label1 = label[i]
             smri1 = smri[i]
 
-            aug_time = Dropout()(data)
-            pcc = np.corrcoef(aug_time)
-            aug_time = np.array(aug_time)
+            aug_time = Dropout(p_zero=0.1)(data)
+            aug_time_np = np.array(aug_time)
+            with np.errstate(invalid='ignore', divide='ignore'):
+                pcc = np.corrcoef(aug_time_np)
+            pcc = np.nan_to_num(pcc, nan=0.0, posinf=1.0, neginf=-1.0)
+            np.fill_diagonal(pcc, 1.0)
+            pcc = np.clip(pcc, -1.0, 1.0)
 
-            pcc[np.isnan(pcc)] = 0
-
-            augment_time.append(aug_time)
+            augment_time.append(aug_time_np)
             augment_lable.append(label1)
             augment_pc.append(pcc)
 

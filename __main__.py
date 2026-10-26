@@ -1,7 +1,10 @@
 from datetime import datetime
 import random
 import torch
-import wandb
+try:
+    import wandb
+except ImportError:
+    wandb = None
 import hydra
 from omegaconf import DictConfig, open_dict
 from dataset import dataset_factory
@@ -41,14 +44,15 @@ def main(cfg: DictConfig):
         random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)
         with open_dict(cfg):
             cfg.seed = seed
-        run = wandb.init(reinit=True, tags=[f"{cfg.dataset.name}"])
+        run = wandb.init(reinit=True, tags=[f"{cfg.dataset.name}"]) if wandb is not None else None
         max_process = model_training(cfg)
         acc.append(max_process[0])
         spe.append(max_process[1])
         sen.append(max_process[2])
         auc.append(max_process[4])  # train() returns [acc, spe, sen, f1, auc]; upstream swapped these two
         f1.append(max_process[3])
-        run.finish()
+        if run is not None:
+            run.finish()
     print(f"ACC: {np.mean(acc)*100:.2f}±{np.std(acc, ddof=1)*100:.2f}")
     print(f"SPE: {np.mean(spe)*100:.2f}±{np.std(spe, ddof=1)*100:.2f}")
     print(f"SEN: {np.mean(sen)*100:.2f}±{np.std(sen, ddof=1)*100:.2f}")

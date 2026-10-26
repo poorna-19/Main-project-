@@ -34,6 +34,8 @@ SHORT = ['clean', 'fmri_noise_1.0', 'smri_missing']
 
 
 def load_model(variant, d):
+    from hydra.core.global_hydra import GlobalHydra
+    GlobalHydra.instance().clear()
     with initialize_config_dir(config_dir=str(ROOT / 'conf'), version_base=None):
         cfg = compose('config', overrides=['dataset=ABIDE', 'model=bnt', 'model.cls_num=2'] + VARIANTS[variant])
     with open_dict(cfg):  # what dataset/abide.py sets from the data

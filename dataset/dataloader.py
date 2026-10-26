@@ -68,7 +68,8 @@ def init_stratified_dataloader(cfg: DictConfig,
             train_length - 1) // cfg.dataset.batch_size + 1
         cfg.total_steps = cfg.steps_per_epoch * cfg.training.epochs
 
-    split = StratifiedShuffleSplit(n_splits=1, test_size=val_length + test_length)
+    seed = cfg.get('seed', 0)
+    split = StratifiedShuffleSplit(n_splits=1, test_size=val_length + test_length, random_state=seed)
     for train_index, test_valid_index in split.split(final_timeseires, labels):
         final_timeseires_train = final_timeseires[train_index]
         final_pearson_train = final_pearson[train_index]
@@ -80,7 +81,7 @@ def init_stratified_dataloader(cfg: DictConfig,
         labels_val_test = labels[test_valid_index]
         smri_val_test = smri[test_valid_index]
 
-    split2 = StratifiedShuffleSplit(n_splits=1, test_size=test_length)
+    split2 = StratifiedShuffleSplit(n_splits=1, test_size=test_length, random_state=seed)
     for test_index, valid_index in split2.split(final_timeseires_val_test, labels_val_test):
         final_timeseires_test = final_timeseires_val_test[test_index]
         final_pearson_test = final_pearson_val_test[test_index]

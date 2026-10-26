@@ -4,7 +4,8 @@ defaults:
   - optimizer: adam
   - training: basic_training
   - datasz: 100p
-  - preprocess: mixup
+  - preprocess: non_mixup # default non_mixup for clean baseline; mixup can be selected
+
 
 repeat_time: 5
 seed: 0  # repeat i uses seed + i: same split and init for every variant
