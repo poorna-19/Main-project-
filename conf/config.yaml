@@ -1,0 +1,16 @@
+defaults:
+  - dataset: ABIDE
+  - model: bnt # brainnetcnn, fbnetgen, bnt, transformer
+  - optimizer: adam
+  - training: basic_training
+  - datasz: 100p
+  - preprocess: mixup
+
+repeat_time: 5
+seed: 0  # repeat i uses seed + i: same split and init for every variant
+log_path: result
+save_learnable_graph: False
+
+# wandb
+wandb_entity: sunshinew208
+project: BrainMamba-sfMRI

@@ -1,0 +1,26 @@
+name: CDCo_MambaNet  # eval()-ed in models/__init__.py; a hyphen is not a valid name
+fuse_channel: 512
+fuse_shape: 48
+ct_loss: 1
+rate1: 0.1 
+rate2: 0.5
+abide_fmri_feature_shape: 64
+adni_fmri_feature_shape: 48
+taowu_fmri_feature_shape: 120
+neurocon_fmri_feature_shape: 72
+smri_feature_shape: 54
+fmri_encoder_deepth: [2, 2, 6, 2]
+fmri_encoder_dims: [64, 128, 256, 512, 1024]
+d_state: 8
+d_conv: 3
+expand: 4
+cls_num: 4
+grad_checkpoint: false  # true = checkpoint encoder blocks (exact fp32 grads) so batch 16 fits a 4 GB GPU
+distill_detach: true    # peer prediction is a fixed target in L_ct; upstream (false) collapses to one class
+# Novelty (both false = repaired baseline). See models/CDCo_MambaNet/encoder/reliability.py
+reliability_fusion: false  # RAF: per-patient evidential reliability weights each modality's tokens
+dynamic_dim: false         # DFD: per-patient kept feature width, min_dim..fuse_shape, set by reliability
+min_dim: 12
+nested_dropout: 0.3        # share of training samples with an extra random width cut (orders the dims)
+edl_weight: 0.5
+edl_anneal_epochs: 10

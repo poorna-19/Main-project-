@@ -1,0 +1,10 @@
+name: adni
+batch_size: 16
+test_batch_size: 16
+val_batch_size: 16
+train_set: 0.8
+val_set: 0.1
+path: /opt/DM/Disease_Data/my_data/adni_4class_data.npy
+stratified: True
+drop_last: False
+expand: True
