@@ -233,14 +233,19 @@ class Train:
         self.save_path.mkdir(exist_ok=True, parents=True)
         np.save(self.save_path/"test_max_metrics.npy",
                 results, allow_pickle=True)
+        np.save(self.save_path/"best_val_metrics.npy",
+                results, allow_pickle=True)
         torch.save(self.model.state_dict(), self.save_path/"model.npy")
+        torch.save(self.model.state_dict(), self.save_path/"best_model.pt")
 
     def train(self):
         training_process = []
         self.current_step = 0
         
-        max_test_accuracy = float('-inf')
+        max_val_accuracy = float('-inf')
+        best_val_epoch = 0
         best_epoch_metrics = {}
+        early_stopping_patience = self.config.training.get('early_stopping_patience', None)
 
         for epoch in range(self.epochs):
             self.model.epoch = epoch
@@ -268,8 +273,10 @@ class Train:
                 f'Peak VRAM: {vram_mb:.1f} MB',
             ]))
 
-            if self.test_accuracy.final > max_test_accuracy:
-                max_test_accuracy = self.test_accuracy.final
+            # Checkpoint selection strictly based on VALIDATION accuracy (zero test leakage)
+            if self.val_accuracy.final > max_val_accuracy:
+                max_val_accuracy = self.val_accuracy.final
+                best_val_epoch = epoch
                 best_epoch_metrics = {
                     "Epoch": epoch,
 
@@ -290,10 +297,11 @@ class Train:
                     "Test F1": test_result[3],
                     "Test AUC": test_result[4],
                 }
+                # Save checkpoint when validation accuracy improves
+                self.save_result(best_epoch_metrics, epoch)
 
-            self.save_result(best_epoch_metrics, epoch)
             if wandb is not None and getattr(wandb, 'run', None) is not None:
-                wandb.run.summary['Max Test Accuracy'] = max_test_accuracy
+                wandb.run.summary['Max Val Accuracy'] = max_val_accuracy
                 wandb.run.summary.update(best_epoch_metrics)
 
             training_process.append({
@@ -301,6 +309,8 @@ class Train:
 
                 "Train Loss": self.train_loss.avg,
                 "Train Accuracy": self.train_accuracy.final,
+                "Val Loss": self.val_loss.avg,
+                "Val Accuracy": self.val_accuracy.final,
                 "Test Loss": self.test_loss.avg,
                 "Test Accuracy": self.test_accuracy.final,
                 "Test SPE": test_result[1],
@@ -309,12 +319,40 @@ class Train:
                 "Test AUC": test_result[4],
             })
 
-        final = {'seed': self.config.get('seed'), 'model': {k: self.config.model.get(k) for k in (
-                     'reliability_fusion', 'dynamic_dim', 'min_dim', 'nested_dropout', 'edl_weight')},
-                 'training': dict(self.config.training),
-                 'test_last_epoch': dict(zip(['ACC', 'SPE', 'SEN', 'F1', 'AUC'], map(float, test_result)))}
+            # Early stopping check
+            if early_stopping_patience is not None and (epoch - best_val_epoch) >= early_stopping_patience:
+                self.logger.info(f"Early stopping triggered at epoch {epoch}: No validation improvement for {early_stopping_patience} epochs (best epoch: {best_val_epoch}, best val acc: {max_val_accuracy:.4f}).")
+                break
+
+        # Save final epoch model separately
+        self.save_path.mkdir(exist_ok=True, parents=True)
+        torch.save(self.model.state_dict(), self.save_path / "final_epoch_model.pt")
+
+        test_at_best_val = [
+            best_epoch_metrics.get('Test Accuracy', test_result[0]),
+            best_epoch_metrics.get('Test SPE', test_result[1]),
+            best_epoch_metrics.get('Test SEN', test_result[2]),
+            best_epoch_metrics.get('Test F1', test_result[3]),
+            best_epoch_metrics.get('Test AUC', test_result[4]),
+        ]
+
+        final = {
+            'seed': self.config.get('seed'),
+            'best_val_epoch': best_val_epoch,
+            'best_val_metrics': best_epoch_metrics,
+            'test_at_best_val': {
+                'ACC': float(test_at_best_val[0]),
+                'SPE': float(test_at_best_val[1]),
+                'SEN': float(test_at_best_val[2]),
+                'F1': float(test_at_best_val[3]),
+                'AUC': float(test_at_best_val[4]),
+            },
+            'test_last_epoch': dict(zip(['ACC', 'SPE', 'SEN', 'F1', 'AUC'], map(float, test_result))),
+            'model': {k: self.config.model.get(k) for k in (
+                 'reliability_fusion', 'dynamic_dim', 'min_dim', 'nested_dropout', 'edl_weight')},
+            'training': dict(self.config.training),
+        }
         if self.config.training.get('robustness_eval', True):
             final['robustness'] = self.robustness()
-        self.save_path.mkdir(exist_ok=True, parents=True)
         json.dump(final, open(self.save_path / 'final.json', 'w'), indent=1, default=float)
-        return test_result
+        return test_at_best_val

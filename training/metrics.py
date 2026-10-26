@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, roc_auc_score
 import torch
 
-def calculate_metrics(pred, label):
+def calculate_metrics(pred, label, return_dict=False):
     pred_scores = pred
     pred = np.argmax(pred, axis=-1)
     label = np.argmax(label, axis=-1)
@@ -15,16 +15,38 @@ def calculate_metrics(pred, label):
     tn = conf_matrix.sum() - tp - fn - fp
     with np.errstate(invalid='ignore', divide='ignore'):
         if len(tp) == 2:  # binary: class 1 (patient, e.g. ASD) is the positive class
-            avg_specificity, avg_sensitivity = tn[1] / (tn[1] + fp[1]), tp[1] / (tp[1] + fn[1])
+            avg_specificity = float(tn[1] / (tn[1] + fp[1])) if (tn[1] + fp[1]) > 0 else 0.0
+            avg_sensitivity = float(tp[1] / (tp[1] + fn[1])) if (tp[1] + fn[1]) > 0 else 0.0
+            prec_asd = float(tp[1] / (tp[1] + fp[1])) if (tp[1] + fp[1]) > 0 else 0.0
+            prec_ctrl = float(tp[0] / (tp[0] + fp[0])) if (tp[0] + fp[0]) > 0 else 0.0
         else:  # one-vs-rest, macro-averaged
-            avg_specificity, avg_sensitivity = np.mean(tn / (tn + fp)), np.mean(tp / (tp + fn))
-    f1 = f1_score(label, pred, average='macro')
+            avg_specificity = float(np.mean(tn / (tn + fp)))
+            avg_sensitivity = float(np.mean(tp / (tp + fn)))
+            prec_asd = float(np.mean(tp / (tp + fp)))
+            prec_ctrl = 0.0
+    f1 = float(f1_score(label, pred, average='macro'))
     # AUC from predicted probabilities (upstream binarised the argmax, i.e. AUC of hard labels)
     probs = torch.softmax(torch.tensor(np.asarray(pred_scores, dtype=np.float64)), -1).numpy()
     if probs.shape[1] == 2:
-        auc = roc_auc_score(label, probs[:, 1])
+        auc = float(roc_auc_score(label, probs[:, 1]))
     else:
-        auc = roc_auc_score(label, probs, average='macro', multi_class='ovr', labels=list(range(probs.shape[1])))
+        auc = float(roc_auc_score(label, probs, average='macro', multi_class='ovr', labels=list(range(probs.shape[1]))))
+    
+    if return_dict:
+        balanced_accuracy = float((avg_sensitivity + avg_specificity) / 2.0)
+        return {
+            'accuracy': float(accuracy),
+            'specificity': float(avg_specificity),
+            'sensitivity': float(avg_sensitivity),
+            'balanced_accuracy': float(balanced_accuracy),
+            'f1': float(f1),
+            'auc': float(auc),
+            'confusion_matrix': conf_matrix.tolist(),
+            'precision_asd': float(prec_asd),
+            'recall_asd': float(avg_sensitivity),
+            'precision_control': float(prec_ctrl),
+            'recall_control': float(avg_specificity),
+        }
     return accuracy, avg_specificity, avg_sensitivity, f1, auc
 
 
