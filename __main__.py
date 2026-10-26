@@ -53,11 +53,12 @@ def main(cfg: DictConfig):
         f1.append(max_process[3])
         if run is not None:
             run.finish()
-    print(f"ACC: {np.mean(acc)*100:.2f}±{np.std(acc, ddof=1)*100:.2f}")
-    print(f"SPE: {np.mean(spe)*100:.2f}±{np.std(spe, ddof=1)*100:.2f}")
-    print(f"SEN: {np.mean(sen)*100:.2f}±{np.std(sen, ddof=1)*100:.2f}")
-    print(f"AUC: {np.mean(auc)*100:.2f}±{np.std(auc, ddof=1)*100:.2f}")
-    print(f"F1: {np.mean(f1)*100:.2f}±{np.std(f1, ddof=1)*100:.2f}")
+    std_ddof = 1 if len(acc) > 1 else 0
+    print(f"ACC: {np.mean(acc)*100:.2f}±{np.std(acc, ddof=std_ddof)*100:.2f}")
+    print(f"SPE: {np.mean(spe)*100:.2f}±{np.std(spe, ddof=std_ddof)*100:.2f}")
+    print(f"SEN: {np.mean(sen)*100:.2f}±{np.std(sen, ddof=std_ddof)*100:.2f}")
+    print(f"AUC: {np.mean(auc)*100:.2f}±{np.std(auc, ddof=std_ddof)*100:.2f}")
+    print(f"F1: {np.mean(f1)*100:.2f}±{np.std(f1, ddof=std_ddof)*100:.2f}")
 
 
 if __name__ == '__main__':

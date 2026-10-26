@@ -7,6 +7,7 @@ import torch.nn as nn
 from .preprocess import StandardScaler
 from scipy.ndimage import rotate
 import random
+import os
 
 
 class Dropout(nn.Module):
@@ -78,8 +79,12 @@ def data_aug(time, pc, label, smri, cache):
     augment_pc = []
 
     length, _, _ = time.shape
-    out = np.lib.format.open_memmap(cache, mode='w+', dtype=np.float32,
-                                    shape=(4 * length,) + tuple(smri.shape[1:]))
+    expected_shape = (4 * length,) + tuple(smri.shape[1:])
+    expected_bytes = int(np.prod(expected_shape)) * 4
+    cached_ok = os.path.exists(cache) and os.path.getsize(cache) == expected_bytes
+    mode = 'r+' if cached_ok else 'w+'
+    out = np.lib.format.open_memmap(cache, mode=mode, dtype=np.float32,
+                                    shape=expected_shape)
     aug_times = 3
     for j in range(aug_times):
         for i in range(length):
@@ -99,12 +104,14 @@ def data_aug(time, pc, label, smri, cache):
             augment_lable.append(label1)
             augment_pc.append(pcc)
 
-            if j == 0:
-                out[length + i] = random_rotate_3d(smri1).numpy()
-            else:
-                out[(j + 1) * length + i] = random_erase_3d(smri1.clone()).numpy()
-    out[:length] = smri.numpy()
-    out.flush()
+            if not cached_ok:
+                if j == 0:
+                    out[length + i] = random_rotate_3d(smri1).numpy()
+                else:
+                    out[(j + 1) * length + i] = random_erase_3d(smri1.clone()).numpy()
+    if not cached_ok:
+        out[:length] = smri.numpy()
+        out.flush()
 
     augment_time = torch.tensor(np.array(augment_time))
     augment_lable = torch.stack(augment_lable)

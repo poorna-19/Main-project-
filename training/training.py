@@ -136,9 +136,12 @@ class Train:
         device = next(self.model.parameters()).device
         accum_steps = max(1, self.config.training.get('accumulate_grad_batches', 1))
         optimizer.zero_grad()
-        num_batches = len(self.train_dataloader)
+        max_b = self.config.training.get('max_batches', None)
+        num_batches = len(self.train_dataloader) if not max_b else min(max_b, len(self.train_dataloader))
 
         for batch_idx, (fMRI_Feature, fMRI_Con, label, sMRI_Feature) in enumerate(self.train_dataloader):
+            if max_b is not None and batch_idx >= max_b:
+                break
             self.current_step += 1
             lr_scheduler.update(optimizer=optimizer, step=self.current_step)
             fMRI_Feature = fMRI_Feature.to(device)
@@ -157,6 +160,9 @@ class Train:
             predict, predict1 = self.model(fMRI_Feature, fMRI_Con, sMRI_Feature, avail)
             loss = self.model.loss_function(predict, label, predict1)
 
+            if torch.isnan(loss) or torch.isinf(loss):
+                raise ValueError(f"NaN or Inf loss encountered at batch {batch_idx + 1} (loss={loss.item()})")
+
             self.train_loss.update_with_weight_loss(loss.item(), label.shape[0])
 
             # Gradient accumulation for low-VRAM GPUs (e.g., 2 GB MX450)
@@ -166,6 +172,11 @@ class Train:
             if (batch_idx + 1) % accum_steps == 0 or (batch_idx + 1) == num_batches:
                 optimizer.step()
                 optimizer.zero_grad()
+
+            log_interval = 5 if max_b else 50
+            if (batch_idx + 1) % log_interval == 0 or (batch_idx + 1) == num_batches or batch_idx == 0:
+                vram_mb = torch.cuda.max_memory_allocated() / (1024 ** 2) if torch.cuda.is_available() else 0.0
+                self.logger.info(f"Epoch {getattr(self, 'epoch', 0)} | Batch {batch_idx + 1}/{num_batches} | Step Loss: {loss.item():.4f} | Avg Loss: {self.train_loss.avg:.4f} | Peak VRAM: {vram_mb:.1f} MB")
 
             # Primary clean head in pred_list, secondary in pred_list1
             pred_list.extend(predict.tolist())
@@ -233,6 +244,7 @@ class Train:
 
         for epoch in range(self.epochs):
             self.model.epoch = epoch
+            self.epoch = epoch
             self.reset_meters()
             self.train_per_epoch(self.optimizers[0], self.lr_schedulers[0])
             val_result, val_result1, pred_list_val, pred_list_val1, label_list_val = self.test_per_epoch(self.val_dataloader,
@@ -241,7 +253,7 @@ class Train:
             test_result, test_result1, pred_list_test, pred_list_test1, label_list_test = self.test_per_epoch(self.test_dataloader,
                                             self.test_loss, "test")
             
-
+            vram_mb = torch.cuda.max_memory_allocated() / (1024 ** 2) if torch.cuda.is_available() else 0.0
             self.logger.info(" | ".join([
                 f'Epoch[{epoch}/{self.epochs}]',
                 f'Train Loss:{self.train_loss.avg: .5f}',
@@ -253,6 +265,7 @@ class Train:
                 f'Test Loss:{self.test_loss.avg: .5f}',
                 f'Test Accuracy:{self.test_accuracy.final: .5f}',
                 f'Test Acc:{self.test_mse: .5f}',
+                f'Peak VRAM: {vram_mb:.1f} MB',
             ]))
 
             if self.test_accuracy.final > max_test_accuracy:
