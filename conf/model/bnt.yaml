@@ -2,8 +2,11 @@ name: CDCo_MambaNet  # eval()-ed in models/__init__.py; a hyphen is not a valid 
 fuse_channel: 512
 fuse_shape: 48
 ct_loss: 1
-rate1: 0.1 
+rate1: 0.8
 rate2: 0.5
+distill_warmup_epochs: 5
+distill_temp: 2.0
+
 abide_fmri_feature_shape: 64
 adni_fmri_feature_shape: 48
 taowu_fmri_feature_shape: 120
