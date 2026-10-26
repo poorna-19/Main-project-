@@ -75,15 +75,6 @@ class Train:
         self.logger = logger
         self.model = model
         self.logger.info(f'#model params: {count_params(self.model)}')
-        if self.config.training.get('resume_checkpoint'):
-            ckpt_path = self.config.training.resume_checkpoint
-            if os.path.exists(ckpt_path):
-                self.model.load_state_dict(torch.load(ckpt_path))
-                self.logger.info(f"Successfully resumed model weights from: {ckpt_path}")
-                shutil.copy2(ckpt_path, self.save_path / "best_model.pt")
-                shutil.copy2(ckpt_path, self.save_path / "model.npy")
-            else:
-                self.logger.warning(f"Resume checkpoint not found: {ckpt_path}")
         self.train_dataloader, self.val_dataloader, self.test_dataloader = dataloaders
         self.epochs = cfg.training.epochs
         self.total_steps = cfg.total_steps
@@ -93,6 +84,16 @@ class Train:
         self.save_path.mkdir(exist_ok=True, parents=True)
         OmegaConf.save(self.config, self.save_path / "config.yaml")
         self.save_learnable_graph = cfg.save_learnable_graph
+
+        if self.config.training.get('resume_checkpoint'):
+            ckpt_path = self.config.training.resume_checkpoint
+            if os.path.exists(ckpt_path):
+                self.model.load_state_dict(torch.load(ckpt_path))
+                self.logger.info(f"Successfully resumed model weights from: {ckpt_path}")
+                shutil.copy2(ckpt_path, self.save_path / "best_model.pt")
+                shutil.copy2(ckpt_path, self.save_path / "model.npy")
+            else:
+                self.logger.warning(f"Resume checkpoint not found: {ckpt_path}")
 
         self.loss = torch.nn.CrossEntropyLoss()
 
@@ -259,6 +260,7 @@ class Train:
         best_val_epoch = 0
         best_epoch_metrics = {}
         early_stopping_patience = self.config.training.get('early_stopping_patience', None)
+        no_improvement_count = 0
 
         if self.config.training.get('resume_checkpoint'):
             metrics_path = Path(self.config.training.resume_checkpoint).parent / "best_val_metrics.npy"
@@ -298,6 +300,7 @@ class Train:
             if self.val_accuracy.final > max_val_accuracy:
                 max_val_accuracy = self.val_accuracy.final
                 best_val_epoch = epoch
+                no_improvement_count = 0
                 best_epoch_metrics = {
                     "Epoch": epoch,
                     'Train Loss': float(self.train_loss.avg),
@@ -311,6 +314,8 @@ class Train:
                 }
                 # Save best checkpoint strictly on validation improvement
                 self.save_result(best_epoch_metrics, epoch)
+            else:
+                no_improvement_count += 1
 
             if wandb is not None and getattr(wandb, 'run', None) is not None:
                 wandb.run.summary['Max Val Accuracy'] = max_val_accuracy
@@ -329,7 +334,7 @@ class Train:
             })
 
             # Early stopping check (enforced strictly on validation accuracy)
-            if early_stopping_patience is not None and (epoch - best_val_epoch) >= early_stopping_patience:
+            if early_stopping_patience is not None and no_improvement_count >= early_stopping_patience:
                 self.logger.info(f"Early stopping triggered at epoch {epoch+1}: No validation improvement for {early_stopping_patience} consecutive epochs (best epoch: {best_val_epoch+1}, best val acc: {max_val_accuracy:.4f}).")
                 break
 
