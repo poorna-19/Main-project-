@@ -1,5 +1,7 @@
 from utils import TotalMeter, count_params
 import json
+import os
+import shutil
 import torch
 import numpy as np
 from pathlib import Path
@@ -73,6 +75,15 @@ class Train:
         self.logger = logger
         self.model = model
         self.logger.info(f'#model params: {count_params(self.model)}')
+        if self.config.training.get('resume_checkpoint'):
+            ckpt_path = self.config.training.resume_checkpoint
+            if os.path.exists(ckpt_path):
+                self.model.load_state_dict(torch.load(ckpt_path))
+                self.logger.info(f"Successfully resumed model weights from: {ckpt_path}")
+                shutil.copy2(ckpt_path, self.save_path / "best_model.pt")
+                shutil.copy2(ckpt_path, self.save_path / "model.npy")
+            else:
+                self.logger.warning(f"Resume checkpoint not found: {ckpt_path}")
         self.train_dataloader, self.val_dataloader, self.test_dataloader = dataloaders
         self.epochs = cfg.training.epochs
         self.total_steps = cfg.total_steps
@@ -248,6 +259,18 @@ class Train:
         best_val_epoch = 0
         best_epoch_metrics = {}
         early_stopping_patience = self.config.training.get('early_stopping_patience', None)
+
+        if self.config.training.get('resume_checkpoint'):
+            metrics_path = Path(self.config.training.resume_checkpoint).parent / "best_val_metrics.npy"
+            if metrics_path.exists():
+                try:
+                    prev_metrics = np.load(metrics_path, allow_pickle=True).item()
+                    max_val_accuracy = float(prev_metrics.get('Val Accuracy', float('-inf')))
+                    best_epoch_metrics = prev_metrics
+                    best_val_epoch = int(prev_metrics.get('Epoch', 0))
+                    self.logger.info(f"Initialized max_val_accuracy to {max_val_accuracy:.4f} from previous best_val_metrics (Epoch {best_val_epoch+1})")
+                except Exception as e:
+                    self.logger.warning(f"Could not load previous best_val_metrics: {e}")
 
         for epoch in range(self.epochs):
             self.model.epoch = epoch
