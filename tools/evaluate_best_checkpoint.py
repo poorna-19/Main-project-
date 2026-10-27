@@ -1,6 +1,7 @@
 """
 Evaluate best validation checkpoint on the held-out test set
 """
+import argparse
 import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -15,8 +16,18 @@ from models.CDCo_MambaNet.cdcomnet import CDCo_MambaNet
 from training.metrics import calculate_metrics
 
 def evaluate():
-    checkpoint_path = "result/controlled_run/10-26-14-51-19/best_model.pt"
-    config_path = "result/controlled_run/10-26-14-51-19/config.yaml"
+    parser = argparse.ArgumentParser(description="Evaluate checkpoint on held-out test and validation sets")
+    parser.add_argument("--checkpoint", type=str, default="result/controlled_run_resumed/10-26-23-09-22/best_model.pt",
+                        help="Path to checkpoint .pt file")
+    parser.add_argument("--config", type=str, default="result/controlled_run_resumed/10-26-23-09-22/config.yaml",
+                        help="Path to config.yaml file")
+    parser.add_argument("--out_file", type=str, default=None,
+                        help="Path to output json file (default: test_evaluation.json in checkpoint directory)")
+    args = parser.parse_args()
+
+    checkpoint_path = args.checkpoint
+    config_path = args.config
+    out_file = args.out_file or os.path.join(os.path.dirname(checkpoint_path), "test_evaluation.json")
     
     if not os.path.exists(checkpoint_path):
         print(f"Checkpoint not found at {checkpoint_path}")
@@ -71,8 +82,7 @@ def evaluate():
     print("VALIDATION SET VERIFICATION RESULTS:")
     print(json.dumps(val_metrics, indent=2))
     
-    # Save test results to result/controlled_run/10-26-14-51-19/test_evaluation.json
-    out_file = "result/controlled_run/10-26-14-51-19/test_evaluation.json"
+    # Save test results to out_file
     with open(out_file, "w") as f:
         json.dump({"test_metrics": metrics, "val_metrics": val_metrics}, f, indent=2)
     print(f"Saved evaluation results to {out_file}")
