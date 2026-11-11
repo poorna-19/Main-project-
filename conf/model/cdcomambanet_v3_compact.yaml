@@ -1,0 +1,41 @@
+# CDCo-MambaNet V3 Compact (~1.8M - 2.0M Target Architecture)
+# Tri-Modal Parameter-Efficient Cross-Domain Collaborative Mamba Network
+# Sized specifically to eliminate overparameterization on ABIDE I (N=284)
+# Features single unified classification head replacing conflicting dual heads.
+
+name: CDCo_MambaNet_V4
+fuse_channel: 128
+fuse_shape: 48
+cls_num: 2
+
+# Modality Encoders Right-Sizing (~2.05M total parameters vs 27.8M baseline)
+smri_depth: 10                         # 3D ResNet-10 (902,674 parameters)
+smri_feature_shape: 54
+abide_fmri_feature_shape: 64
+fmri_encoder_deepth: [1, 1, 2, 1]      # Compact ConvNeXtV2 depths
+fmri_encoder_dims: [16, 32, 64, 128, 256] # Compact ConvNeXtV2 dims (969,136 parameters)
+fc_threshold: 0.2
+fc_dropout: 0.2                        # BrainConnectomeGNN (36,353 parameters)
+
+# SSM and Fusion Configuration
+d_state: 8
+d_conv: 3
+expand: 4
+grad_checkpoint: true
+
+# Single Unified Classification Head (Replaces fractured dual heads)
+unified_head_hidden: 96
+unified_head_dropout: 0.5
+spatial_attn_heads: 4
+temperature_scaling: true
+
+# Preserved Novelty Components: Contrastive Perturbation
+ct_loss: 1.0
+
+# Preserved Novelty Components: RAF, DFD, Nested Dropout, Multi-Task EDL
+reliability_fusion: true               # RAF: evidential reliability weights each modality
+dynamic_dim: true                      # DFD: per-patient kept feature width (min_dim..fuse_shape)
+min_dim: 12
+nested_dropout: 0.3                    # Stochastic dimension cut enforcing ordered representation
+edl_weight: 0.5
+edl_anneal_epochs: 10

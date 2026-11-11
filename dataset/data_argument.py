@@ -81,10 +81,17 @@ def data_aug(time, pc, label, smri, cache):
     length, _, _ = time.shape
     expected_shape = (4 * length,) + tuple(smri.shape[1:])
     expected_bytes = int(np.prod(expected_shape)) * 4
-    cached_ok = os.path.exists(cache) and os.path.getsize(cache) == expected_bytes
+    cached_ok = os.path.exists(cache) and (os.path.getsize(cache) in (expected_bytes, expected_bytes + 128))
     mode = 'r+' if cached_ok else 'w+'
-    out = np.lib.format.open_memmap(cache, mode=mode, dtype=np.float32,
-                                    shape=expected_shape)
+    try:
+        out = np.lib.format.open_memmap(cache, mode=mode, dtype=np.float32,
+                                        shape=expected_shape)
+    except (PermissionError, OSError):
+        if cached_ok:
+            out = np.lib.format.open_memmap(cache, mode='r', dtype=np.float32,
+                                            shape=expected_shape)
+        else:
+            raise
     aug_times = 3
     for j in range(aug_times):
         for i in range(length):

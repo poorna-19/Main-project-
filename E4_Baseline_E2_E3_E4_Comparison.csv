@@ -1,0 +1,18 @@
+Metric,Controlled Baseline (Seed 0),CDCo-MambaNet V2 (E2),CDCo-MambaNet V3 (E3 Ensemble),CDCo-MambaNet V3 (E3 Head 1),CDCo-MambaNet V4 (E4 Unified)
+Evaluation Split,exact_splits_seed0.json,exact_splits_seed0.json,exact_splits_seed0.json,exact_splits_seed0.json,exact_splits_seed0.json
+Held-Out Test Participants,28 Subjects,28 Subjects,28 Subjects,28 Subjects,28 Subjects
+Total Model Parameters,"27,729,262","27,811,311","3,202,271","3,202,271","3,226,317"
+Parameter Reduction vs Baseline,0.00%,+0.30%,88.45%,88.45%,88.36%
+Peak Training VRAM,~720 MB,729.9 MB,198.0 MB,198.0 MB,180.0 MB
+Test Accuracy,50.00%,39.29%,53.57%,64.29%,64.29%
+Balanced Accuracy,50.00%,39.29%,53.57%,64.29%,64.29%
+ASD Sensitivity (Recall),42.86%,21.43%,50.00%,42.86%,71.43%
+Control Specificity,57.14%,57.14%,57.14%,85.71%,57.14%
+Macro Precision,50.00%,37.72%,53.59%,67.50%,64.58%
+Macro F1-Score,49.74%,37.29%,53.51%,62.57%,64.10%
+ROC-AUC,53.57%,26.02%,50.51%,65.82%,62.24%
+"Confusion Matrix [TN, FP, FN, TP]","[8, 6, 8, 6]","[8, 6, 11, 3]","[8, 6, 7, 7]","[12, 2, 8, 6]","[8, 6, 4, 10]"
+Checkpoint Metric,val_acc,val_loss,val_loss,val_loss,val_loss (Strict Minimum)
+Head Architecture,Dual Heads,Dual Heads,Dual Heads (Ensemble),Class Token (Head 1),Single Unified Evidential Head
+Mutual Distillation,Active,Active,Active,Active,Removed (Non-Conflicting)
+Temperature Scaling,None,None,None,None,T=2.1308 (Validation-Fitted)

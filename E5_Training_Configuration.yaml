@@ -1,0 +1,53 @@
+# ==============================================================================
+# CDCo-MambaNet V4 — Experiment E5: Training Execution Configurations
+# Document: E5_Training_Configuration.yaml
+# Guardrail: Pre-execution configuration registry. Read-only until approved.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Base Training Configuration (Reference: E4 Seed 0)
+# ------------------------------------------------------------------------------
+training_base:
+  name: "Train"
+  epochs: 30
+  accumulate_grad_batches: 8         # Effective batch size = 2 * 8 = 16
+  early_stopping_patience: 5         # Stop after 5 consecutive non-improving epochs
+  checkpoint_metric: "val_loss"      # Strictly minimum validation loss
+  clip_grad_norm: null               # Default unclipped
+  corrupt_p_missing: 0.0
+  corrupt_p_noise: 0.0
+  corrupt_max_sigma: 1.0
+  robustness_eval: false
+  max_batches: null
+  resume_checkpoint: null
+
+# ------------------------------------------------------------------------------
+# 2. Pillar E5-A: Gradient Norm Clipping Training Configuration
+# ------------------------------------------------------------------------------
+e5_train_clip10:
+  name: "Train"
+  epochs: 30
+  accumulate_grad_batches: 8
+  clip_grad_norm: 1.0                # Enforces max gradient L2 norm = 1.0 before step()
+  early_stopping_patience: 5
+  checkpoint_metric: "val_loss"
+  corrupt_p_missing: 0.0
+  corrupt_p_noise: 0.0
+
+# ------------------------------------------------------------------------------
+# 3. Dynamic Optimization Parameters Documentation
+# ------------------------------------------------------------------------------
+optimization_parameters:
+  total_training_subjects: 227
+  augmented_training_samples: 908    # 227 subjects * 4 static views
+  batch_size: 2
+  mini_batches_per_epoch: 454        # 908 / 2
+  accumulation_steps: 8
+  effective_batch_size: 16           # 2 * 8
+  full_accumulation_steps_per_epoch: 56 # 454 // 8
+  flush_accumulation_steps_per_epoch: 1  # 454 % 8 = 6 batches
+  optimizer_updates_per_epoch: 57    # 56 + 1
+  total_mini_batches_30_epochs: 13620 # 454 * 30
+  total_optimizer_updates_30_epochs: 1710 # 57 * 30
+  warmup_optimizer_steps_3_epochs: 171    # 57 * 3
+  warmup_mini_batch_steps_3_epochs: 1362  # 454 * 3

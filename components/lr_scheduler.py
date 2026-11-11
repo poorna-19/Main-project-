@@ -22,7 +22,7 @@ class LRScheduler:
 
         warm_up_from = lr_config.warm_up_from
         warm_up_steps = lr_config.warm_up_steps
-        total_steps = self.training_config.total_steps
+        total_steps = lr_config.get('total_optimizer_steps', None) or self.training_config.get('total_optimizer_steps', None) or self.training_config.total_steps
 
         # assert 0 <= step <= total_steps
         if step < warm_up_steps:

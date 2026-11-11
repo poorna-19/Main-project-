@@ -1,0 +1,17 @@
+Experiment_ID,Model_Paradigm,Seed,Best_Epoch,Selection_Metric,Val_Score,Test_Acc,Test_BAcc,Test_SEN_ASD,Test_SPE_CON,Test_F1,Test_AUC,Checkpoint_Path,Status
+EXP-00-KAG,CDCo-MambaNet Repaired Original,5-Seeds Avg,100,Last Epoch,-,55.00%,55.00%,-,-,53.00%,55.41%,results/kaggle_v3_run.log,Historical Baseline
+EXP-01-CTL,CDCo-MambaNet Controlled Baseline,Seed 0,8,val_acc,58.62%,50.00%,50.00%,42.86%,57.14%,49.74%,53.57%,result/controlled_run/best_model.pt,Certified Baseline
+EXP-02-NOV0,CDCo-MambaNet Exp 2 (Novelty),Seed 0,6,val_acc_ensemble,65.52%,64.29%,64.29%,85.71%,42.86%,62.57%,56.63%,result/phase6_experiment2_novelty/10-28-13-02-58/best_model.pt,Certified Target
+EXP-02-NOV1,CDCo-MambaNet Exp 2 (Novelty),Seed 1,6,val_acc_ensemble,55.17%,50.00%,50.00%,42.86%,57.14%,49.74%,52.55%,result/phase6_multiseed/runs/seed1/seed_1/best_model.pt,Certified MultiSeed
+EXP-02-NOV2,CDCo-MambaNet Exp 2 (Novelty),Seed 2,1,val_acc_ensemble,58.62%,50.00%,50.00%,35.71%,64.29%,48.96%,42.35%,result/phase6_multiseed/runs/seed2/seed_2/best_model.pt,Certified MultiSeed
+EXP-02-NOV3,CDCo-MambaNet Exp 2 (Novelty),Seed 3,3,val_acc_ensemble,55.17%,39.29%,39.29%,42.86%,35.71%,39.21%,39.80%,result/phase6_multiseed/runs/seed3/seed_3/best_model.pt,Certified MultiSeed
+EXP-02-NOV4,CDCo-MambaNet Exp 2 (Novelty),Seed 4,4,val_acc_ensemble,58.62%,-,-,-,-,-,-,result/phase6_multiseed/runs/seed4/seed_4/best_model.pt,Partial Interrupted
+EXP-03-LR0,Classical Logistic Regression (L2),Seed 0,-,val_bacc (C=0.001),58.33%,71.43%,71.43%,71.43%,71.43%,71.43%,65.31%,result/phase6_multiseed/classical_baselines_multiseed.json,Certified Benchmark
+EXP-03-LR1,Classical Logistic Regression (L2),Seed 1,-,val_bacc (C=0.001),65.24%,64.29%,64.29%,57.14%,71.43%,61.54%,63.27%,result/phase6_multiseed/classical_baselines_multiseed.json,Certified Benchmark
+EXP-03-LR2,Classical Logistic Regression (L2),Seed 2,-,val_bacc (C=0.001),58.57%,60.71%,60.71%,57.14%,64.29%,59.26%,60.20%,result/phase6_multiseed/classical_baselines_multiseed.json,Certified Benchmark
+EXP-03-LR3,Classical Logistic Regression (L2),Seed 3,-,val_bacc (C=0.001),65.24%,64.29%,64.29%,64.29%,64.29%,64.29%,62.24%,result/phase6_multiseed/classical_baselines_multiseed.json,Certified Benchmark
+EXP-03-LR4,Classical Logistic Regression (L2),Seed 4,-,val_bacc (C=0.001),58.57%,60.71%,60.71%,57.14%,64.29%,59.26%,59.18%,result/phase6_multiseed/classical_baselines_multiseed.json,Certified Benchmark
+EXP-04-HYB0,Hybrid FC + Deep Latents (L2 LR),Seed 0,-,val_bacc (C=5.0),65.48%,67.86%,67.86%,78.57%,57.14%,70.97%,67.86%,result/phase6_experiment2_novelty/linear_probe.json,Certified Synergy
+EXP-04-HYB1,Hybrid FC + Deep Latents (L2 LR),Seed 1,-,val_bacc (C=1.0),62.14%,64.29%,64.29%,64.29%,64.29%,64.29%,61.73%,result/phase6_multiseed/runs/seed1/linear_probe_seed1.json,Certified Synergy
+EXP-04-HYB2,Hybrid FC + Deep Latents (L2 LR),Seed 2,-,val_bacc (C=0.1),68.57%,75.00%,75.00%,78.57%,71.43%,75.86%,66.33%,result/phase6_multiseed/runs/seed2/linear_probe_seed2.json,Peak Benchmark
+EXP-04-HYB3,Hybrid FC + Deep Latents (L2 LR),Seed 3,-,val_bacc (C=0.01),55.24%,50.00%,50.00%,42.86%,57.14%,46.15%,46.94%,result/phase6_multiseed/runs/seed3/linear_probe_seed3.json,Certified Synergy

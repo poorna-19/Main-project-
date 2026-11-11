@@ -1,0 +1,73 @@
+{
+  "seed": 0,
+  "checkpoint_metric": "val_loss",
+  "best_val_epoch": 1,
+  "best_val_loss": 2.3905957320640825,
+  "optimal_temperature": 2.130825996398926,
+  "val_calibration": {
+    "initial_temp": 1.0,
+    "optimal_temp": 2.130825996398926,
+    "initial_nll": 0.7082557678222656,
+    "final_nll": 0.6965637803077698,
+    "initial_ece": 0.07127943737753507,
+    "final_ece": 0.015099266479755236,
+    "ece_reduction_pct": 78.81679901626998
+  },
+  "test_uncalibrated": {
+    "accuracy": 0.6428571428571429,
+    "balanced_accuracy": 0.6428571428571428,
+    "sensitivity": 0.7142857142857143,
+    "specificity": 0.5714285714285714,
+    "precision_asd": 0.625,
+    "precision_control": 0.6666666666666666,
+    "precision_macro": 0.6458333333333333,
+    "f1_asd": 0.6666666666666666,
+    "f1_control": 0.6153846153846154,
+    "f1_macro": 0.641025641025641,
+    "auc": 0.6224489795918368,
+    "ece": 0.07219399298940384,
+    "brier": 0.4753654987120773,
+    "nll": 0.6683703660964966,
+    "confusion_matrix": [
+      [
+        8,
+        6
+      ],
+      [
+        4,
+        10
+      ]
+    ]
+  },
+  "test_calibrated": {
+    "accuracy": 0.6428571428571429,
+    "balanced_accuracy": 0.6428571428571428,
+    "sensitivity": 0.7142857142857143,
+    "specificity": 0.5714285714285714,
+    "precision_asd": 0.625,
+    "precision_control": 0.6666666666666666,
+    "precision_macro": 0.6458333333333333,
+    "f1_asd": 0.6666666666666666,
+    "f1_control": 0.6153846153846154,
+    "f1_macro": 0.641025641025641,
+    "auc": 0.6224489795918368,
+    "ece": 0.10927314417702816,
+    "brier": 0.484783401777377,
+    "nll": 0.6778910756111145,
+    "confusion_matrix": [
+      [
+        8,
+        6
+      ],
+      [
+        4,
+        10
+      ]
+    ]
+  },
+  "evidential_uncertainty": {
+    "mean_uncertainty_all": 0.4890621304512024,
+    "mean_uncertainty_correct": 0.4850933849811554,
+    "mean_uncertainty_incorrect": 0.4962059557437897
+  }
+}

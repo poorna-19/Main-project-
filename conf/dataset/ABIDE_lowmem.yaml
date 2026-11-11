@@ -9,3 +9,4 @@ stratified: True
 drop_last: False
 expand: True
 aug_cache: E:/abide_data/train_aug_smri.npy
+exact_splits_path: result/phase6_baselines_and_regularization/exact_splits_seed0.json

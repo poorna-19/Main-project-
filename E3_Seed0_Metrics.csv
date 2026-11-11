@@ -1,0 +1,17 @@
+Metric,Ensemble (Primary),Head 1,Head 2
+Accuracy,53.57%,64.29%,42.86%
+Balanced Accuracy,53.57%,64.29%,42.86%
+ASD Sensitivity (Recall),50.00%,42.86%,57.14%
+Control Specificity,57.14%,85.71%,28.57%
+Precision (ASD),53.85%,75.00%,44.44%
+Precision (Control),53.33%,60.00%,40.00%
+Precision (Macro),53.59%,67.50%,42.22%
+Recall (Macro),53.57%,64.29%,42.86%
+F1-Score (ASD),51.85%,54.55%,50.00%
+F1-Score (Control),55.17%,70.59%,33.33%
+F1-Score (Macro),53.51%,62.57%,41.67%
+ROC-AUC,50.51%,65.82%,39.80%
+True Negatives (TN),8,12,4
+False Positives (FP),6,2,10
+False Negatives (FN),7,8,6
+True Positives (TP),7,6,8

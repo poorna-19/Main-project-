@@ -1,0 +1,90 @@
+# ==============================================================================
+# CDCo-MambaNet V4 — Experiment E5: Optimizer & Scheduler Configurations
+# Document: E5_Optimizer_Configuration.yaml
+# Guardrail: Pre-execution configuration registry. Read-only until approved.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Baseline Optimizer Configuration (Reference from E4)
+# ------------------------------------------------------------------------------
+baseline_adamw_wd05:
+  name: "AdamW"
+  lr: 1.0e-4
+  match_rule: null
+  except_rule: null
+  no_weight_decay: false
+  weight_decay: 0.05
+  lr_scheduler:
+    mode: "cos_lr"                   # Historical pulsing mode (136-step cycle)
+    base_lr: 1.0e-4
+    target_lr: 1.0e-6
+    warm_up_from: 1.0e-6
+    warm_up_steps: 5                 # 5 mini-batches (~0.01 epoch)
+
+# ------------------------------------------------------------------------------
+# 2. Pillar E5-A: Weight Decay Sweep Configurations
+# ------------------------------------------------------------------------------
+e5_a2_wd05:
+  name: "AdamW"
+  lr: 1.0e-4
+  weight_decay: 0.05                 # Baseline L2 penalty (Reference)
+  lr_scheduler:
+    mode: "cos_lr"
+    base_lr: 1.0e-4
+    target_lr: 1.0e-6
+    warm_up_from: 1.0e-6
+    warm_up_steps: 5
+
+e5_a2_wd10:
+  name: "AdamW"
+  lr: 1.0e-4
+  weight_decay: 0.10                 # Elevated L2 penalty (+100% vs Baseline)
+  lr_scheduler:
+    mode: "cos_lr"
+    base_lr: 1.0e-4
+    target_lr: 1.0e-6
+    warm_up_from: 1.0e-6
+    warm_up_steps: 5
+
+e5_a2_wd20:
+  name: "AdamW"
+  lr: 1.0e-4
+  weight_decay: 0.20                 # Heavy L2 penalty (+300% vs Baseline)
+  lr_scheduler:
+    mode: "cos_lr"
+    base_lr: 1.0e-4
+    target_lr: 1.0e-6
+    warm_up_from: 1.0e-6
+    warm_up_steps: 5
+
+# ------------------------------------------------------------------------------
+# 3. Pillar E5-B: Learning Rate & Monotonic Cosine Scheduler Configurations
+# Mathematical Basis:
+#   Epochs = 30
+#   Total mini-batches = 454 batches/epoch * 30 epochs = 13,620 batch steps
+#   Accumulation = 8 batches -> 57 optimizer steps/epoch * 30 epochs = 1,710 optimizer steps
+#   Warmup = 3 full epochs = 171 optimizer steps (1,362 batch steps)
+# ------------------------------------------------------------------------------
+e5_b1_cos_monotonic:
+  name: "AdamW"
+  lr: 1.0e-4
+  weight_decay: 0.05
+  lr_scheduler:
+    mode: "cos"                      # Monotonic Cosine Annealing (No within-epoch cycles)
+    base_lr: 1.0e-4
+    target_lr: 1.0e-6
+    warm_up_from: 1.0e-6
+    warm_up_steps: 1362              # 3 full epochs linear warmup (batch-step level)
+    warm_up_optimizer_steps: 171     # 3 full epochs linear warmup (optimizer-step level)
+
+e5_b2_cos_low_lr:
+  name: "AdamW"
+  lr: 5.0e-5                         # Lower peak learning rate (-50%)
+  weight_decay: 0.05
+  lr_scheduler:
+    mode: "cos"                      # Monotonic Cosine Annealing
+    base_lr: 5.0e-5
+    target_lr: 5.0e-7
+    warm_up_from: 1.0e-6
+    warm_up_steps: 1362              # 3 full epochs linear warmup
+    warm_up_optimizer_steps: 171

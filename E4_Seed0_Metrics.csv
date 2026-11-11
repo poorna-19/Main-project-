@@ -1,0 +1,19 @@
+Metric,Uncalibrated,Calibrated (T=2.13)
+Accuracy,64.29%,64.29%
+Balanced Accuracy,64.29%,64.29%
+ASD Sensitivity (Recall),71.43%,71.43%
+Control Specificity,57.14%,57.14%
+Precision (ASD),62.50%,62.50%
+Precision (Control),66.67%,66.67%
+Precision (Macro),64.58%,64.58%
+F1-Score (ASD),66.67%,66.67%
+F1-Score (Control),61.54%,61.54%
+F1-Score (Macro),64.10%,64.10%
+ROC-AUC,62.24%,62.24%
+Expected Calibration Error (ECE),7.22%,10.93%
+Brier Score,0.4754,0.4848
+Negative Log-Likelihood (NLL),0.6684,0.6779
+True Negatives (TN),8,8
+False Positives (FP),6,6
+False Negatives (FN),4,4
+True Positives (TP),10,10

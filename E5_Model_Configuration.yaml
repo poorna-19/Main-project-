@@ -1,0 +1,114 @@
+# ==============================================================================
+# CDCo-MambaNet V4 — Experiment E5: Model Architectural Configurations
+# Document: E5_Model_Configuration.yaml
+# Guardrail: Pre-execution configuration registry. Read-only until approved.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Base Model Configuration (Reference: CDCo_MambaNet_V4 Baseline)
+# ------------------------------------------------------------------------------
+model_base:
+  name: "CDCo_MambaNet_V4"
+  fuse_channel: 128
+  fuse_shape: 48
+  cls_num: 2
+  smri_depth: 18                    # 3D ResNet-18 (2,080,512 params)
+  smri_feature_shape: 54
+  abide_fmri_feature_shape: 64
+  fmri_encoder_deepth: [1, 1, 2, 1]
+  fmri_encoder_dims: [16, 32, 64, 128, 256] # Compact ConvNeXtV2 (969,120 params)
+  fc_threshold: 0.2
+  fc_dropout: 0.2                   # BrainConnectomeGNN (7,296 params)
+  d_state: 8
+  d_conv: 3
+  expand: 4
+  grad_checkpoint: true
+  unified_head_hidden: 96
+  unified_head_dropout: 0.50
+  spatial_attn_heads: 4
+  spatial_attn_dropout: 0.10
+  temperature_scaling: true
+  ct_loss: 1.0
+  reliability_fusion: true
+  dynamic_dim: true
+  min_dim: 12
+  nested_dropout: 0.30
+  edl_weight: 0.50
+  edl_anneal_epochs: 10
+  instance_norm: false
+
+# ------------------------------------------------------------------------------
+# 2. Pillar E5-A: Regularization Dropout Sweeps
+# ------------------------------------------------------------------------------
+e5_model_drop10:
+  <<: *model_base
+  spatial_attn_dropout: 0.10        # Baseline Reference
+
+e5_model_drop25:
+  <<: *model_base
+  spatial_attn_dropout: 0.25        # High-entropy spatial token pooling
+
+e5_model_hdrop50:
+  <<: *model_base
+  unified_head_dropout: 0.50        # Baseline Reference
+
+e5_model_hdrop60:
+  <<: *model_base
+  unified_head_dropout: 0.60        # Strong classifier feature co-adaptation penalty
+
+# ------------------------------------------------------------------------------
+# 3. Pillar E5-C: Multimodal Capacity & Unimodal Isolation Configurations
+# ------------------------------------------------------------------------------
+e5_model_smri_only:
+  <<: *model_base
+  modality_mask: [true, false, false] # sMRI active; fMRI and FC stand-in tokens
+  experiment_note: "Measures 3D volumetric structural predictive power in isolation"
+
+e5_model_fmri_only:
+  <<: *model_base
+  modality_mask: [false, true, false] # fMRI active; sMRI and FC stand-in tokens
+  experiment_note: "Measures BOLD dynamic sequence predictive power in isolation"
+
+e5_model_fc_only:
+  <<: *model_base
+  modality_mask: [false, false, true] # FC active; sMRI and fMRI stand-in tokens
+  experiment_note: "Measures connectome graph topology predictive power in isolation"
+
+e5_model_trimodal:
+  <<: *model_base
+  modality_mask: [true, true, true]   # Baseline multimodal reference
+
+# ------------------------------------------------------------------------------
+# 4. Pillar E5-D: Scanner Robustness (Feature-Level Normalization)
+# ------------------------------------------------------------------------------
+e5_model_inst_norm:
+  <<: *model_base
+  instance_norm: true               # Apply InstanceNorm1d in feature adapters
+  experiment_note: "Strips scanner-specific intensity offsets without target leakage"
+
+# ------------------------------------------------------------------------------
+# 5. Pillar E5-E: Multimodal Fusion Optimization
+# ------------------------------------------------------------------------------
+e5_model_heads4:
+  <<: *model_base
+  spatial_attn_heads: 4             # Head dimension = 48 // 4 = 12 (Baseline)
+
+e5_model_heads8:
+  <<: *model_base
+  spatial_attn_heads: 8             # Head dimension = 48 // 8 = 6 (Finer resolution)
+
+e5_model_dfd12:
+  <<: *model_base
+  min_dim: 12                       # Lower bound = 12/48 (25% feature width)
+
+e5_model_dfd24:
+  <<: *model_base
+  min_dim: 24                       # Lower bound = 24/48 (50% feature width)
+
+e5_model_ct10:
+  <<: *model_base
+  ct_loss: 1.0                      # Baseline contrastive perturbation weight
+
+e5_model_ct05:
+  <<: *model_base
+  ct_loss: 0.5                      # Milder contrastive perturbation weight

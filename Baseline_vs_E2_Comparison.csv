@@ -1,0 +1,18 @@
+Metric,Controlled Baseline (Seed 0),Phase 6 Exp 2 Baseline,CDCo-MambaNet V2 (E2 Connectome),Delta vs. Controlled Baseline
+Evaluation Split,exact_splits_seed0.json,exact_splits_seed0.json,exact_splits_seed0.json,Identical (Zero Leakage)
+Test Set Size,28 Subjects (14 ASD / 14 Control),28 Subjects (14 ASD / 14 Control),28 Subjects (14 ASD / 14 Control),Identical
+Test Accuracy,50.00% (14/28),64.29% (18/28),39.29% (11/28),-10.71%
+Balanced Accuracy,50.00%,64.29%,39.29%,-10.71%
+ASD Precision,50.00% (6/12),60.00% (12/20),33.33% (3/9),-16.67%
+Control Precision,50.00% (8/16),75.00% (6/8),42.11% (8/19),-7.89%
+ASD Sensitivity (Recall),42.86% (6/14),85.71% (12/14),21.43% (3/14),-21.43%
+Control Specificity,57.14% (8/14),42.86% (6/14),57.14% (8/14),+0.00%
+Macro F1-Score,49.74%,62.57%,37.29%,-12.45%
+ROC-AUC,53.57%,56.63%,26.02%,-27.55%
+Confusion Matrix,"[[8, 6], [8, 6]]","[[6, 8], [2, 12]]","[[8, 6], [11, 3]]","FN: +3, TP: -3"
+Checkpoint Selection Metric,val_acc,val_acc_ensemble,val_loss (Strict Minimum),Loss-Governed
+Selected Best Epoch,Epoch 10,Epoch 15,Epoch 4 (val_loss=2.7629),Early Stopping Trigger
+FC Modality Integration,Ignored (0% weight),Ignored (0% weight),BrainConnectomeGNN (Active 82K params),Topological Prior
+Total Model Parameters,27,729,262,27,729,262,27,811,311,+82,049 (+0.295%)
+Training Cohort Size,227 Subjects,227 Subjects,227 Subjects,Identical
+Validation Cohort Size,29 Subjects,29 Subjects,29 Subjects,Identical

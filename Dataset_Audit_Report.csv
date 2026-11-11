@@ -1,0 +1,40 @@
+Metric_or_Attribute,Value,Status_or_Notes
+Dataset_Name,ABIDE I (Autism Brain Imaging Data Exchange I),Verified
+Data_File_Path,E:/abide_data/abide_284.npy,Verified on disk (30.45 MB)
+sMRI_Data_Path,E:/abide_data/abide_smri96.npy,Verified on disk (1005.06 MB)
+Phenotype_Cohort_File,E:/abide_data/cohort.csv,Verified on disk (284 rows)
+Total_Subject_Count,284,Verified exact count
+ASD_Subject_Count,140 (49.30%),Verified (DX_GROUP=1)
+Control_Subject_Count,144 (50.70%),Verified (DX_GROUP=2)
+Unique_Subject_IDs,284,Verified (Zero duplicate SUB_IDs)
+Duplicate_Subjects,0,Clean (Zero duplicate participants)
+fMRI_Timeseries_Shape,"(284, 116, 115)",Verified float32 (AAL-116 ROIs x 115 time points)
+Functional_Connectivity_Shape,"(284, 116, 116)",Verified float32 (Pearson correlation matrix)
+sMRI_Volume_Shape,"(284, 1, 96, 96, 96)",Verified float32 (MNI152 normalized 1mm isotropic)
+Missing_Values_Imaging,0,Verified (Zero NaNs or Infs across all modalities)
+Missing_Phenotype_FIQ,14 subjects,Verified in cohort.csv (FIQ missing for 14 subjects)
+Subject_Age_Range,6.47 to 18.00 years,Mean: 13.08 ± 2.84 years (Pediatric/Adolescent cohort)
+Subject_Sex_Distribution,"Male: 231 (81.3%), Female: 53 (18.7%)",Reflects standard ASD epidemiology ratio (~4:1)
+Number_of_Scanner_Sites,17 sites,Verified across 284 subjects
+Site_NYU,58 subjects (20.42%),Largest single site
+Site_UM_1,40 subjects (14.08%),Second largest site
+Site_UCLA_1,29 subjects (10.21%),Third largest site
+Site_YALE,21 subjects (7.39%),Site count verified
+Site_KKI,16 subjects (5.63%),Site count verified
+Site_UM_2,15 subjects (5.28%),Site count verified
+Site_OLIN,14 subjects (4.93%),Site count verified
+Site_LEUVEN_2,14 subjects (4.93%),Site count verified
+Site_STANFORD,13 subjects (4.58%),Site count verified
+Site_PITT,13 subjects (4.58%),Site count verified
+Site_TRINITY,13 subjects (4.58%),Site count verified
+Site_USM,11 subjects (3.87%),Site count verified
+Site_UCLA_2,11 subjects (3.87%),Site count verified
+Site_SDSU,10 subjects (3.52%),Site count verified
+Site_MAX_MUN,4 subjects (1.41%),Site count verified
+Site_CALTECH,1 subject (0.35%),Site count verified
+Site_LEUVEN_1,1 subject (0.35%),Site count verified
+Train_Split_Size,227 subjects (80.0%),115 Control / 112 ASD
+Validation_Split_Size,29 subjects (10.2%),15 Control / 14 ASD
+Test_Split_Size,28 subjects (9.8%),14 Control / 14 ASD (Strictly 50/50 balance)
+Subject_Overlap_Across_Splits,0 subjects,Strictly disjoint (Train ∩ Val = 0; Train ∩ Test = 0; Val ∩ Test = 0)
+Data_Leakage_Audit,PASSED,Per-subject z-score normalization; offline 4x aug on train only

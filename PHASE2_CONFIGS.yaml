@@ -1,0 +1,168 @@
+# ==============================================================================
+# CDCo-MambaNet V4: Phase 2 Experimental Configurations Specification (Revised)
+# Document: PHASE2_CONFIGS.yaml
+# Guardrail: Pre-execution configuration registry. Read-only until approved.
+# Note: Optimizer-update-based scheduler cadence (Approach A) is formally adopted.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Global Common Configuration (Shared across all Phase 2 Experiments)
+# ------------------------------------------------------------------------------
+common_base:
+  seed: 0
+  repeat_time: 1
+  device: "cuda:0"
+  log_path: "result/phase2_experiments"
+  
+  dataset:
+    name: "ABIDE"
+    path: "E:/abide_data/abide_284.npy"
+    exact_splits_path: "result/phase6_multiseed/splits/exact_splits_seed0.json"
+    aug_cache: "E:/abide_data/train_aug_smri.npy"
+    batch_size: 2
+    val_batch_size: 2
+    test_batch_size: 2
+    drop_last: false
+    expand: true                     # Default 4x static augmentation cache
+
+  model:
+    name: "CDCo_MambaNet_V4"
+    fuse_channel: 128
+    fuse_shape: 48
+    cls_num: 2
+    smri_depth: 18                  # 3D ResNet-18 (~2.08M params)
+    smri_feature_shape: 54
+    abide_fmri_feature_shape: 64
+    fmri_encoder_deepth: [1, 1, 2, 1]
+    fmri_encoder_dims: [16, 32, 64, 128, 256] # Compact ConvNeXtV2 (~969K params)
+    fc_threshold: 0.2
+    fc_dropout: 0.2
+    d_state: 8
+    d_conv: 3
+    expand: 4
+    grad_checkpoint: true
+    unified_head_hidden: 96
+    unified_head_dropout: 0.50
+    spatial_attn_heads: 4
+    spatial_attn_dropout: 0.10
+    temperature_scaling: true
+    ct_loss: 1.0
+    reliability_fusion: true
+    dynamic_dim: true
+    min_dim: 12
+    nested_dropout: 0.30
+    edl_weight: 0.50
+    edl_anneal_epochs: 10
+
+  training:
+    name: "Train"
+    epochs: 30
+    accumulate_grad_batches: 8       # Effective batch size = 16 (57 optimizer updates/epoch)
+    early_stopping_patience: 5
+    checkpoint_metric: "val_loss"    # Strictly governed by validation loss
+    clip_grad_norm: null             # Default unclipped
+    corrupt_p_missing: 0.0
+    corrupt_p_noise: 0.0
+
+  optimizer:
+    name: "AdamW"
+    lr: 1.0e-4
+    weight_decay: 0.05
+    lr_scheduler:
+      mode: "cos_lr"                 # Baseline high-frequency pulsing mode
+      base_lr: 1.0e-4
+      target_lr: 1.0e-6
+      warm_up_from: 1.0e-6
+      warm_up_steps: 5
+
+# ------------------------------------------------------------------------------
+# 2. Experiment E1: Cosine Learning-Rate Scheduler Correction (Approach A)
+# Single Factor: Replace pulsing 'cos_lr' with monotonic 'cos' synchronous with optimizer updates
+# Scheduler advances ONLY on optimizer.step() (57 times/epoch)
+# ------------------------------------------------------------------------------
+experiment_e1_lr_cosine:
+  experiment_id: "E1_lr_cosine"
+  output_dir: "result/phase2_experiments/E1_lr_cosine/seed_0"
+  report_dir: "reports/Phase2/E1_lr_cosine"
+  optimizer:
+    name: "AdamW"
+    lr: 1.0e-4
+    weight_decay: 0.05
+    lr_scheduler:
+      mode: "cos"                    # Monotonic Cosine Annealing (zero within-epoch cycles)
+      base_lr: 1.0e-4
+      target_lr: 1.0e-6
+      warm_up_from: 1.0e-6
+      warm_up_steps: 171             # Exactly 3 full epochs of optimizer updates (3 * 57)
+      total_optimizer_steps: 1710    # 30 epochs * 57 optimizer updates
+
+# ------------------------------------------------------------------------------
+# 3. Experiment E2: Gradient Norm Clipping
+# Single Factor: Introduce max_norm=1.0 threshold across accumulated batches
+# Placed immediately before optimizer.step()
+# ------------------------------------------------------------------------------
+experiment_e2_grad_clip:
+  experiment_id: "E2_grad_clip"
+  output_dir: "result/phase2_experiments/E2_grad_clip/seed_0"
+  report_dir: "reports/Phase2/E2_grad_clip"
+  training:
+    accumulate_grad_batches: 8
+    clip_grad_norm: 1.0              # Enforce max gradient L2 norm = 1.0
+    early_stopping_patience: 5
+    checkpoint_metric: "val_loss"
+
+# ------------------------------------------------------------------------------
+# 4. Experiment E3: Systematic Weight Decay Evaluation
+# Single Factor: Systematically sweep weight_decay across {0.01, 0.05, 0.10}
+# ------------------------------------------------------------------------------
+experiment_e3_weight_decay:
+  experiment_id: "E3_weight_decay"
+  variants:
+    wd_01:
+      output_dir: "result/phase2_experiments/E3_weight_decay/wd_01/seed_0"
+      optimizer:
+        weight_decay: 0.01           # Relaxed L2 regularization
+    wd_05:
+      output_dir: "result/phase2_experiments/E3_weight_decay/wd_05/seed_0"
+      optimizer:
+        weight_decay: 0.05           # Baseline reference
+    wd_10:
+      output_dir: "result/phase2_experiments/E3_weight_decay/wd_10/seed_0"
+      optimizer:
+        weight_decay: 0.10           # Stringent L2 regularization
+  report_dir: "reports/Phase2/E3_weight_decay"
+
+# ------------------------------------------------------------------------------
+# 5. Experiment E4: Spatial Attention Pooling Dropout Evaluation
+# Single Factor: Sweep spatial_attn_dropout across {0.10, 0.25}
+# ------------------------------------------------------------------------------
+experiment_e4_spatial_dropout:
+  experiment_id: "E4_spatial_dropout"
+  variants:
+    drop_10:
+      output_dir: "result/phase2_experiments/E4_spatial_dropout/drop_10/seed_0"
+      model:
+        spatial_attn_dropout: 0.10   # Baseline reference
+    drop_25:
+      output_dir: "result/phase2_experiments/E4_spatial_dropout/drop_25/seed_0"
+      model:
+        spatial_attn_dropout: 0.25   # Higher attention entropy / anti-locking
+  report_dir: "reports/Phase2/E4_spatial_dropout"
+
+# ------------------------------------------------------------------------------
+# 6. Experiment E5: Training-Only Stochastic On-the-Fly Augmentation
+# Single Factor: Replace static disk cache with randomized per-epoch 3D transforms
+# Wraps 227 training subjects with 4x dynamic epoch indexing (454 batches/epoch)
+# ------------------------------------------------------------------------------
+experiment_e5_stochastic_aug:
+  experiment_id: "E5_stochastic_aug"
+  output_dir: "result/phase2_experiments/E5_stochastic_aug/seed_0"
+  report_dir: "reports/Phase2/E5_stochastic_aug"
+  dataset:
+    expand: false                    # Deactivate static disk-cached pre-expansion
+    stochastic_aug: true             # Enable on-the-fly random transformations
+    dynamic_epoch_multiplier: 4      # Preserves 908 samples (454 batches = 57 updates/epoch)
+    aug_rotation_range: [-5.0, 5.0]  # Subtle anatomical 3D Euler rotations (degrees)
+    aug_fc_edge_dropout: 0.05        # Random connectome graph edge jittering (p=0.05)
+    aug_smri_noise_sigma: 0.01       # Low-amplitude Gaussian noise
+    train_only: true                 # Strictly isolated from validation and test

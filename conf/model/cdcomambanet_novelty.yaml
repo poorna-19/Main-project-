@@ -1,0 +1,32 @@
+name: CDCo_MambaNet
+fuse_channel: 512
+fuse_shape: 48
+ct_loss: 1
+rate1: 0.8
+rate2: 0.5
+distill_warmup_epochs: 5
+distill_temp: 2.0
+
+abide_fmri_feature_shape: 64
+adni_fmri_feature_shape: 48
+taowu_fmri_feature_shape: 120
+neurocon_fmri_feature_shape: 72
+smri_feature_shape: 54
+fmri_encoder_deepth: [2, 2, 6, 2]
+fmri_encoder_dims: [64, 128, 256, 512, 1024]
+d_state: 8
+d_conv: 3
+expand: 4
+cls_num: 2
+grad_checkpoint: true
+distill_detach: true
+
+# Phase 6 Experiment 2 Novelty Settings
+reliability_fusion: true     # RAF: evidential reliability weights each modality's tokens
+dynamic_dim: true            # DFD: per-patient kept feature width, min_dim..fuse_shape
+min_dim: 12
+nested_dropout: 0.3          # stochastic dimension cut enforcing ordered representation importance
+edl_weight: 0.5
+edl_anneal_epochs: 10
+head1_regularization: true   # LayerNorm + Dropout(0.5) on Head 1 for architectural symmetry
+head1_dropout: 0.5

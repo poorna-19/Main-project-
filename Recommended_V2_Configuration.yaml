@@ -1,0 +1,82 @@
+# CDCo-MambaNet V2 Recommended Configuration
+# Target: ASD Classification on ABIDE I with Scientifically Validated Generalization
+
+dataset:
+  name: abide
+  path: E:/abide_data/abide_284.npy
+  smri_path: E:/abide_data/abide_smri96.npy
+  cohort_csv: E:/abide_data/cohort.csv
+  batch_size: 16
+  accumulate_grad_batches: 4
+  train_set: 0.8
+  val_set: 0.1
+  stratified: true
+  drop_last: false
+  num_rois: 116
+  time_points: 115
+  num_classes: 2
+  num_sites: 17
+
+model:
+  name: CDCo_MambaNet_V2
+  version: 2.0
+  d_model: 128
+  cls_num: 2
+
+  # 1. Preserved Existing Core Novelties
+  reliability_fusion: true       # RAF: evidential reliability weights each modality's tokens
+  dynamic_dim: true              # DFD: dynamic kept feature width (k_min to d_model)
+  min_dim: 16                    # Minimum kept feature dimension under DFD
+  nested_dropout: 0.3            # Stochastic dimension cut enforcing ordered latent importance
+  edl_weight: 0.5                # Evidential Dirichlet loss weighting
+  edl_anneal_epochs: 10          # Annealing schedule for evidential KL divergence penalty
+  head1_regularization: true     # LayerNorm + Dropout symmetry
+
+  # 2. V2 Pillar 1: Explicit Functional Connectivity Graph Integration
+  use_functional_connectivity: true
+  fc_encoder_type: BrainGNN      # Options: BrainGNN, EdgeMLP, GraphAttention
+  fc_threshold: 0.2              # Pearson correlation threshold for graph edge construction
+  fc_embedding_dim: 128
+
+  # 3. V2 Pillar 2: Parameter-Efficient Right-Sizing (<4M total parameters)
+  compact_architecture: true
+  smri_backbone: resnet18_3d     # Compact 3D ResNet (~1.5M params vs 2.9M ResNet-50)
+  fmri_backbone: temporal_transformer_ssm  # Compact Temporal Transformer (~0.5M params vs 24.7M ConvNeXt)
+
+  # 4. V2 Pillar 3: Domain-Adversarial Scanner-Site Invariance
+  domain_adversarial: true
+  lambda_grl: 0.1                # Gradient Reversal Layer scaling coefficient
+  grl_warmup_epochs: 5           # Anneal GRL adversarial strength to prevent early instability
+  site_discriminator_dim: 128
+
+  # 5. V2 Pillar 4: Unified Temperature-Calibrated Evidential Head
+  unified_evidential_head: true  # Eliminates dual-head cancellation & probability bias
+  temperature_calibration: true
+  temperature: 1.5
+
+  # 6. V2 Pillar 5: Manifold Regularization Suite
+  dropblock_3d: true
+  dropblock_size: 3
+  dropblock_prob: 0.1
+  stochastic_depth_prob: 0.1
+  manifold_mixup_prob: 0.2
+  label_smoothing: 0.05
+
+training:
+  epochs: 40
+  early_stopping_patience: 8
+  checkpoint_metric: val_acc_ensemble
+  optimizer:
+    name: AdamW
+    lr: 1.0e-4
+    weight_decay: 1.0e-2
+    betas: [0.9, 0.999]
+  scheduler:
+    name: CosineAnnealingWarmRestarts
+    T_0: 10
+    T_mult: 2
+    eta_min: 1.0e-6
+  stochastic_weight_averaging:
+    enabled: true
+    swa_start_epoch: 25
+    swa_lr: 5.0e-5

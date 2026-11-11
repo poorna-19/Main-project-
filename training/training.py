@@ -78,6 +78,8 @@ class Train:
         self.train_dataloader, self.val_dataloader, self.test_dataloader = dataloaders
         self.epochs = cfg.training.epochs
         self.total_steps = cfg.total_steps
+        self.current_step = 0
+        self.optimizer_step = 0
         self.optimizers = optimizers
         self.lr_schedulers = lr_schedulers
         self.save_path = Path(cfg.log_path) / cfg.unique_id
@@ -157,7 +159,6 @@ class Train:
             if max_b is not None and batch_idx >= max_b:
                 break
             self.current_step += 1
-            lr_scheduler.update(optimizer=optimizer, step=self.current_step)
             fMRI_Feature = fMRI_Feature.to(device)
             fMRI_Con = fMRI_Con.to(device)
             label = label.to(device)
@@ -183,8 +184,30 @@ class Train:
             loss_scaled = loss / accum_steps
             loss_scaled.backward()
 
+            if batch_idx == 0 and getattr(self, 'epoch', 0) == 0:
+                fc_enc = getattr(getattr(self.model, 'fuse_encoder', None), 'fc_encoder', None)
+                if fc_enc is not None:
+                    fc_grads = [p.grad.abs().sum().item() for p in fc_enc.parameters() if p.grad is not None]
+                    active_fc_params = sum(g > 0 for g in fc_grads)
+                    self.logger.info(f"[VERIFIED GRADIENT FLOW] FC GNN Branch: {active_fc_params}/{len(list(fc_enc.parameters()))} parameters actively receiving non-zero gradients.")
+
             if (batch_idx + 1) % accum_steps == 0 or (batch_idx + 1) == num_batches:
-                optimizer.step()
+                self.optimizer_step += 1
+                lr_scheduler.update(optimizer=optimizer, step=self.optimizer_step)
+
+                scaler = getattr(self, 'scaler', None)
+                if scaler is not None:
+                    scaler.unscale_(optimizer)
+
+                clip_norm = self.config.training.get('clip_grad_norm', None)
+                if clip_norm is not None and float(clip_norm) > 0:
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), float(clip_norm))
+
+                if scaler is not None:
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    optimizer.step()
                 optimizer.zero_grad()
 
             log_interval = 5 if max_b else 50
@@ -203,8 +226,6 @@ class Train:
 
     @torch.no_grad()
     def test_per_epoch(self, dataloader, loss_meter, str_select):
-        labels = []
-        result = []
         label_list = []
         pred_list = []
         pred_list1 = []
@@ -221,14 +242,20 @@ class Train:
             loss = self.model.loss_function(output, label, output1)
             loss_meter.update_with_weight_loss(
                 loss.item(), label.shape[0])
-            result += F.softmax(output, dim=1)[:, 1].tolist()
-            labels += label[:, 1].tolist()
 
-            # Primary clean head is evaluated as main metric (pred_list)
+            # Record predictions from both heads
             pred_list.extend(output.tolist())
             pred_list1.extend(output1.tolist())
-
             label_list.extend(label.tolist())
+
+        # Compute ensemble predictions as average of softmax probabilities
+        p0 = F.softmax(torch.tensor(pred_list, dtype=torch.float32), dim=-1).numpy()
+        p1 = F.softmax(torch.tensor(pred_list1, dtype=torch.float32), dim=-1).numpy()
+        p_ens = 0.5 * (p0 + p1)
+
+        m0 = calculate_metrics(pred_list, label_list, return_dict=True)
+        m1 = calculate_metrics(pred_list1, label_list, return_dict=True)
+        m_ens = calculate_metrics(p_ens, label_list, return_dict=True)
 
         if str_select == "val":
             self.val_accuracy.update_with_weight_acc(pred_list, label_list)
@@ -239,9 +266,7 @@ class Train:
             self.test_accuracy1, _, _, _, _ = calculate_metrics(pred_list, label_list)
             self.test_mse, _, _, _, _ = calculate_metrics(pred_list1, label_list)
 
-        accuracy, specificity, sensitivity, f1, auc = calculate_metrics(pred_list, label_list)
-        accuracy1, specificity1, sensitivity1, f11, auc1 = calculate_metrics(pred_list1, label_list)
-        return [accuracy, specificity, sensitivity, f1, auc], [accuracy1, specificity1, sensitivity1, f11, auc1], pred_list, pred_list1, label_list
+        return m0, m1, m_ens, pred_list, pred_list1, p_ens.tolist(), label_list
 
     def save_result(self, results, epoch):
         self.save_path.mkdir(exist_ok=True, parents=True)
@@ -255,22 +280,27 @@ class Train:
     def train(self):
         training_process = []
         self.current_step = 0
+        self.optimizer_step = 0
         
-        max_val_accuracy = float('-inf')
         best_val_epoch = 0
         best_epoch_metrics = {}
         early_stopping_patience = self.config.training.get('early_stopping_patience', None)
         no_improvement_count = 0
+        checkpoint_metric = self.config.training.get('checkpoint_metric', 'val_acc_ensemble')
+        max_val_metric = float('-inf')
+        best_val_tie_breaker = float('-inf')
+
+        self.logger.info(f"Checkpoint Selection Metric: {checkpoint_metric} (Strictly Validation-Only)")
 
         if self.config.training.get('resume_checkpoint'):
             metrics_path = Path(self.config.training.resume_checkpoint).parent / "best_val_metrics.npy"
             if metrics_path.exists():
                 try:
                     prev_metrics = np.load(metrics_path, allow_pickle=True).item()
-                    max_val_accuracy = float(prev_metrics.get('Val Accuracy', float('-inf')))
+                    max_val_metric = float(prev_metrics.get('Selection_Score', prev_metrics.get('Val Accuracy', float('-inf'))))
                     best_epoch_metrics = prev_metrics
-                    best_val_epoch = int(prev_metrics.get('Epoch', 0))
-                    self.logger.info(f"Initialized max_val_accuracy to {max_val_accuracy:.4f} from previous best_val_metrics (Epoch {best_val_epoch+1})")
+                    best_val_epoch = int(prev_metrics.get('Epoch', 1)) - 1
+                    self.logger.info(f"Initialized max_val_metric to {max_val_metric:.4f} from previous best_val_metrics (Epoch {best_val_epoch+1})")
                 except Exception as e:
                     self.logger.warning(f"Could not load previous best_val_metrics: {e}")
 
@@ -279,63 +309,97 @@ class Train:
             self.epoch = epoch
             self.reset_meters()
             self.train_per_epoch(self.optimizers[0], self.lr_schedulers[0])
-            val_result, val_result1, pred_list_val, pred_list_val1, label_list_val = self.test_per_epoch(self.val_dataloader,
-                                            self.val_loss, "val")
+            val_h1, val_h2, val_ens, pred_list_val, pred_list_val1, pred_list_val_ens, label_list_val = self.test_per_epoch(
+                self.val_dataloader, self.val_loss, "val"
+            )
             
+            # Extract validation-only selection score based on configured checkpoint metric
+            if checkpoint_metric == 'val_loss':
+                current_score = -float(self.val_loss.avg)
+                tie_breaker = val_ens['accuracy']
+            elif checkpoint_metric == 'val_acc_ensemble':
+                current_score = val_ens['accuracy']
+                tie_breaker = val_ens['balanced_accuracy'] + 0.01 * val_ens['auc']
+            elif checkpoint_metric == 'val_bacc_ensemble':
+                current_score = val_ens['balanced_accuracy']
+                tie_breaker = val_ens['auc']
+            elif checkpoint_metric == 'val_acc_head2':
+                current_score = val_h2['accuracy']
+                tie_breaker = val_h2['balanced_accuracy'] + 0.01 * val_h2['auc']
+            elif checkpoint_metric == 'val_acc_head1':
+                current_score = val_h1['accuracy']
+                tie_breaker = val_h1['balanced_accuracy'] + 0.01 * val_h1['auc']
+            else:
+                current_score = val_ens['accuracy']
+                tie_breaker = val_ens['balanced_accuracy']
+
             vram_mb = torch.cuda.max_memory_allocated() / (1024 ** 2) if torch.cuda.is_available() else 0.0
             self.logger.info(" | ".join([
                 f'Epoch[{epoch+1}/{self.epochs}]',
-                f'Train Loss:{self.train_loss.avg: .5f}',
-                f'Train Accuracy:{self.train_accuracy.final: .5f}',
-                f'Val Loss:{self.val_loss.avg: .5f}',
-                f'Val Accuracy:{self.val_accuracy.final: .5f}',
-                f'Val SPE:{val_result[1]: .5f}',
-                f'Val SEN:{val_result[2]: .5f}',
-                f'Val F1:{val_result[3]: .5f}',
-                f'Val AUC:{val_result[4]: .5f}',
+                f'Train Loss:{self.train_loss.avg:.4f}',
+                f'Train Acc:{self.train_accuracy.final*100:.2f}%',
+                f'Val Loss:{self.val_loss.avg:.4f}',
+                f'Val H1 Acc:{val_h1["accuracy"]*100:.2f}% (BAcc: {val_h1["balanced_accuracy"]*100:.2f}%)',
+                f'Val H2 Acc:{val_h2["accuracy"]*100:.2f}% (BAcc: {val_h2["balanced_accuracy"]*100:.2f}%)',
+                f'Val Ens Acc:{val_ens["accuracy"]*100:.2f}% (BAcc: {val_ens["balanced_accuracy"]*100:.2f}%, AUC: {val_ens["auc"]*100:.2f}%)',
                 f'Peak VRAM: {vram_mb:.1f} MB',
             ]))
 
-            # Checkpoint selection strictly based on VALIDATION accuracy (zero test leakage)
-            if self.val_accuracy.final > max_val_accuracy:
-                max_val_accuracy = self.val_accuracy.final
+            # Checkpoint selection strictly based on VALIDATION metric (zero test leakage)
+            is_improvement = False
+            if current_score > max_val_metric:
+                is_improvement = True
+            elif current_score == max_val_metric and tie_breaker > best_val_tie_breaker:
+                is_improvement = True
+
+            if is_improvement:
+                max_val_metric = current_score
+                best_val_tie_breaker = tie_breaker
                 best_val_epoch = epoch
                 no_improvement_count = 0
                 best_epoch_metrics = {
-                    "Epoch": epoch,
-                    'Train Loss': float(self.train_loss.avg),
-                    'Train Accuracy': float(self.train_accuracy.final),
-                    'Val Loss': float(self.val_loss.avg),
-                    'Val Accuracy': float(self.val_accuracy.final),
-                    "Val SPE": float(val_result[1]),
-                    "Val SEN": float(val_result[2]),
-                    "Val F1": float(val_result[3]),
-                    "Val AUC": float(val_result[4]),
+                    "Epoch": epoch + 1,
+                    "Selection_Metric": checkpoint_metric,
+                    "Selection_Score": float(current_score),
+                    "Train Loss": float(self.train_loss.avg),
+                    "Train Accuracy": float(self.train_accuracy.final),
+                    "Val Loss": float(self.val_loss.avg),
+                    "Head1": val_h1,
+                    "Head2": val_h2,
+                    "Ensemble": val_ens,
+                    # Backward compatibility keys:
+                    "Val Accuracy": float(val_ens['accuracy']),
+                    "Val SPE": float(val_ens['specificity']),
+                    "Val SEN": float(val_ens['sensitivity']),
+                    "Val F1": float(val_ens['f1']),
+                    "Val AUC": float(val_ens['auc']),
                 }
-                # Save best checkpoint strictly on validation improvement
                 self.save_result(best_epoch_metrics, epoch)
+                score_str = f"{-current_score:.4f}" if checkpoint_metric == 'val_loss' else f"{current_score*100:.2f}%"
+                self.logger.info(f"-> Saved new best checkpoint at Epoch {epoch+1} ({checkpoint_metric}={score_str})")
             else:
                 no_improvement_count += 1
 
             if wandb is not None and getattr(wandb, 'run', None) is not None:
-                wandb.run.summary['Max Val Accuracy'] = max_val_accuracy
+                wandb.run.summary['Max Val Metric'] = max_val_metric
                 wandb.run.summary.update(best_epoch_metrics)
 
             training_process.append({
-                "Epoch": epoch,
+                "Epoch": epoch + 1,
                 "Train Loss": float(self.train_loss.avg),
                 "Train Accuracy": float(self.train_accuracy.final),
                 "Val Loss": float(self.val_loss.avg),
-                "Val Accuracy": float(self.val_accuracy.final),
-                "Val SPE": float(val_result[1]),
-                "Val SEN": float(val_result[2]),
-                "Val F1": float(val_result[3]),
-                "Val AUC": float(val_result[4]),
+                "Head1": val_h1,
+                "Head2": val_h2,
+                "Ensemble": val_ens,
             })
+            # Save progress incrementally on each epoch
+            self.save_path.mkdir(exist_ok=True, parents=True)
+            json.dump(training_process, open(self.save_path / "epoch_history.json", "w"), indent=2, default=float)
 
-            # Early stopping check (enforced strictly on validation accuracy)
+            # Early stopping check (enforced strictly on validation metric)
             if early_stopping_patience is not None and no_improvement_count >= early_stopping_patience:
-                self.logger.info(f"Early stopping triggered at epoch {epoch+1}: No validation improvement for {early_stopping_patience} consecutive epochs (best epoch: {best_val_epoch+1}, best val acc: {max_val_accuracy:.4f}).")
+                self.logger.info(f"Early stopping triggered at epoch {epoch+1}: No validation improvement for {early_stopping_patience} consecutive epochs (best epoch: {best_val_epoch+1}, best {checkpoint_metric}: {max_val_metric*100:.2f}%).")
                 break
 
         # Save final epoch model separately
@@ -347,52 +411,75 @@ class Train:
         # POST-TRAINING HELD-OUT TEST EVALUATION (After Checkpoint Selection)
         # The test set is evaluated ONLY now using the saved checkpoints.
         # -------------------------------------------------------------
-        self.logger.info(f"=== HELD-OUT TEST EVALUATION (Best Model from Epoch {best_val_epoch+1}) ===")
+        self.logger.info(f"=== HELD-OUT TEST EVALUATION (Best Model from Epoch {best_val_epoch+1}, selected by {checkpoint_metric}) ===")
         best_model_path = self.save_path / "best_model.pt"
         if best_model_path.exists():
             self.model.load_state_dict(torch.load(best_model_path))
         self.test_loss.reset()
-        _, _, pred_list_test, _, label_list_test = self.test_per_epoch(
+        t_h1, t_h2, t_ens, _, _, _, _ = self.test_per_epoch(
             self.test_dataloader, self.test_loss, "test"
         )
-        test_metrics_best = calculate_metrics(pred_list_test, label_list_test, return_dict=True)
-        self.logger.info("Best Validation Model on Held-Out Test Set: " + " | ".join([
+        self.logger.info("Best Validation Model on Held-Out Test Set (Ensemble): " + " | ".join([
             f"Test Loss: {self.test_loss.avg:.5f}",
-            f"ACC: {test_metrics_best['accuracy']*100:.2f}%",
-            f"BACC: {test_metrics_best['balanced_accuracy']*100:.2f}%",
-            f"SPE: {test_metrics_best['specificity']*100:.2f}%",
-            f"SEN: {test_metrics_best['sensitivity']*100:.2f}%",
-            f"F1: {test_metrics_best['f1']*100:.2f}%",
-            f"AUC: {test_metrics_best['auc']*100:.2f}%",
+            f"ACC: {t_ens['accuracy']*100:.2f}%",
+            f"BACC: {t_ens['balanced_accuracy']*100:.2f}%",
+            f"SPE: {t_ens['specificity']*100:.2f}%",
+            f"SEN: {t_ens['sensitivity']*100:.2f}%",
+            f"F1: {t_ens['f1']*100:.2f}%",
+            f"AUC: {t_ens['auc']*100:.2f}%",
         ]))
-        self.logger.info(f"Test Confusion Matrix (Best Model): {test_metrics_best['confusion_matrix']}")
+        self.logger.info(f"Test Confusion Matrix (Ensemble): {t_ens['confusion_matrix']}")
+        self.logger.info(f"Test Set Head 1: ACC={t_h1['accuracy']*100:.2f}%, BACC={t_h1['balanced_accuracy']*100:.2f}%, AUC={t_h1['auc']*100:.2f}%, CM={t_h1['confusion_matrix']}")
+        self.logger.info(f"Test Set Head 2: ACC={t_h2['accuracy']*100:.2f}%, BACC={t_h2['balanced_accuracy']*100:.2f}%, AUC={t_h2['auc']*100:.2f}%, CM={t_h2['confusion_matrix']}")
 
         # Evaluate Final Epoch Model for comparison
         self.logger.info(f"=== HELD-OUT TEST EVALUATION (Final Epoch Model) ===")
         self.model.load_state_dict(torch.load(self.save_path / "final_epoch_model.pt"))
         self.test_loss.reset()
-        _, _, final_pred_test, _, final_label_test = self.test_per_epoch(
+        fin_h1, fin_h2, fin_ens, _, _, _, _ = self.test_per_epoch(
             self.test_dataloader, self.test_loss, "test"
         )
-        test_metrics_final = calculate_metrics(final_pred_test, final_label_test, return_dict=True)
-        self.logger.info("Final Epoch Model on Held-Out Test Set: " + " | ".join([
+        self.logger.info("Final Epoch Model on Held-Out Test Set (Ensemble): " + " | ".join([
             f"Test Loss: {self.test_loss.avg:.5f}",
-            f"ACC: {test_metrics_final['accuracy']*100:.2f}%",
-            f"BACC: {test_metrics_final['balanced_accuracy']*100:.2f}%",
-            f"SPE: {test_metrics_final['specificity']*100:.2f}%",
-            f"SEN: {test_metrics_final['sensitivity']*100:.2f}%",
-            f"F1: {test_metrics_final['f1']*100:.2f}%",
-            f"AUC: {test_metrics_final['auc']*100:.2f}%",
+            f"ACC: {fin_ens['accuracy']*100:.2f}%",
+            f"BACC: {fin_ens['balanced_accuracy']*100:.2f}%",
+            f"SPE: {fin_ens['specificity']*100:.2f}%",
+            f"SEN: {fin_ens['sensitivity']*100:.2f}%",
+            f"F1: {fin_ens['f1']*100:.2f}%",
+            f"AUC: {fin_ens['auc']*100:.2f}%",
         ]))
 
         final = {
             'seed': self.config.get('seed'),
+            'checkpoint_metric': checkpoint_metric,
             'best_val_epoch': best_val_epoch + 1,
             'best_val_metrics': best_epoch_metrics,
-            'test_at_best_val': test_metrics_best,
-            'test_at_final_epoch': test_metrics_final,
+            'test_at_best_val': {
+                'ensemble': t_ens,
+                'head1': t_h1,
+                'head2': t_h2,
+                'accuracy': t_ens['accuracy'],
+                'balanced_accuracy': t_ens['balanced_accuracy'],
+                'specificity': t_ens['specificity'],
+                'sensitivity': t_ens['sensitivity'],
+                'f1': t_ens['f1'],
+                'auc': t_ens['auc'],
+                'confusion_matrix': t_ens['confusion_matrix'],
+            },
+            'test_at_final_epoch': {
+                'ensemble': fin_ens,
+                'head1': fin_h1,
+                'head2': fin_h2,
+                'accuracy': fin_ens['accuracy'],
+                'balanced_accuracy': fin_ens['balanced_accuracy'],
+                'specificity': fin_ens['specificity'],
+                'sensitivity': fin_ens['sensitivity'],
+                'f1': fin_ens['f1'],
+                'auc': fin_ens['auc'],
+                'confusion_matrix': fin_ens['confusion_matrix'],
+            },
             'model': {k: self.config.model.get(k) for k in (
-                 'reliability_fusion', 'dynamic_dim', 'min_dim', 'nested_dropout', 'edl_weight')},
+                 'reliability_fusion', 'dynamic_dim', 'min_dim', 'nested_dropout', 'edl_weight', 'head1_regularization')},
             'training': dict(self.config.training),
         }
         if self.config.training.get('robustness_eval', False):
@@ -401,9 +488,9 @@ class Train:
         json.dump(final, open(self.save_path / 'final.json', 'w'), indent=2, default=float)
         
         return [
-            test_metrics_best['accuracy'],
-            test_metrics_best['specificity'],
-            test_metrics_best['sensitivity'],
-            test_metrics_best['f1'],
-            test_metrics_best['auc'],
+            t_ens['accuracy'],
+            t_ens['specificity'],
+            t_ens['sensitivity'],
+            t_ens['f1'],
+            t_ens['auc'],
         ]

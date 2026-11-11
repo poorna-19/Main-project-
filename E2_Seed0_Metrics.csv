@@ -1,0 +1,18 @@
+Metric,Ensemble (Primary),Head 1,Head 2
+Accuracy,39.29% (11/28),32.14% (9/28),42.86% (12/28)
+Balanced Accuracy,39.29%,32.14%,42.86%
+Precision (ASD),33.33% (3/9),14.29% (1/7),40.00% (4/10)
+Precision (Control),42.11% (8/19),38.10% (8/21),44.44% (8/18)
+Precision (Macro),37.72%,26.19%,42.22%
+Recall (ASD) / Sensitivity,21.43% (3/14),7.14% (1/14),28.57% (4/14)
+Recall (Control) / Specificity,57.14% (8/14),57.14% (8/14),57.14% (8/14)
+F1-Score (ASD),26.09%,9.52%,33.33%
+F1-Score (Control),48.48%,45.71%,50.00%
+F1-Score (Macro),37.29%,27.62%,41.67%
+ROC-AUC,26.02%,26.02%,31.63%
+True Negatives (TN),8,8,8
+False Positives (FP),6,6,6
+False Negatives (FN),11,13,10
+True Positives (TP),3,1,4
+Evaluation Checkpoint,Epoch 4 (val_loss=2.7629),Epoch 4 (val_loss=2.7629),Epoch 4 (val_loss=2.7629)
+Held-Out Test Cohort,28 Subjects (14 ASD / 14 Control),28 Subjects (14 ASD / 14 Control),28 Subjects (14 ASD / 14 Control)

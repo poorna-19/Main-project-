@@ -54,6 +54,10 @@ class Mamba_fusion(nn.Module):
         self.predictor = MLPHead(in_features_ssm, in_features_ssm, in_features)
         self.sl1 = ContrastiveLossModel()
         self.cls_linear = nn.Linear(in_features_ssm*2, config.model.cls_num)
+        self.regularize_head1 = config.model.get('head1_regularization', False)
+        if self.regularize_head1:
+            self.head1_norm = nn.LayerNorm(in_features_ssm * 2)
+            self.head1_drop = nn.Dropout(config.model.get('head1_dropout', 0.5))
         self.mlp_cls = Mlp_cls(in_features=in_features_ssm,act_layer=nn.GELU,cls_num=config.model.cls_num,cls_in=in_features)
         raf, dfd = config.model.get('reliability_fusion', False), config.model.get('dynamic_dim', False)
         self.gate = ReliabilityGate(in_features_ssm, config.model.cls_num, raf=raf, dfd=dfd,
@@ -99,6 +103,9 @@ class Mamba_fusion(nn.Module):
         fmri_age = fuse_out[:, 0, :]
         smri_age = fuse_out[:, c+1, :]
         age_out_linear = torch.cat((fmri_age, smri_age), dim=-1)
+        if getattr(self, 'regularize_head1', False):
+            age_out_linear = self.head1_norm(age_out_linear)
+            age_out_linear = self.head1_drop(age_out_linear)
         age_out = self.cls_linear(age_out_linear)
         
         mlp_out, r_loss1 = self.fuse_method1(fMRI_f, sMRI_f)

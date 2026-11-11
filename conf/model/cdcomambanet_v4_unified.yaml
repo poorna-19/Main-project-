@@ -1,0 +1,36 @@
+name: CDCo_MambaNet_V4
+fuse_channel: 128
+fuse_shape: 48
+cls_num: 2
+
+# Modality Encoders Right-Sizing (Preserved from E3)
+smri_depth: 18                    # 3D ResNet-18 (~2.08M params vs 2.9M ResNet-50)
+smri_feature_shape: 54
+abide_fmri_feature_shape: 64
+fmri_encoder_deepth: [1, 1, 2, 1] # Compact ConvNeXtV2 depths
+fmri_encoder_dims: [16, 32, 64, 128, 256] # Compact ConvNeXtV2 dims (~969K params vs 24.7M in baseline)
+fc_threshold: 0.2
+fc_dropout: 0.2
+
+# SSM and Fusion Configuration
+d_state: 8
+d_conv: 3
+expand: 4
+grad_checkpoint: true
+
+# E4 Novelty: Unified Dual-Stream Evidential Head (Replaces fractured dual heads)
+unified_head_hidden: 96
+unified_head_dropout: 0.5
+spatial_attn_heads: 4
+temperature_scaling: true
+
+# Preserved Novelty Components: Contrastive Perturbation
+ct_loss: 1.0
+
+# Preserved Novelty Components: RAF, DFD, Nested Dropout, Multi-Task EDL
+reliability_fusion: true          # RAF: evidential reliability weights each modality
+dynamic_dim: true                 # DFD: per-patient kept feature width (min_dim..fuse_shape)
+min_dim: 12
+nested_dropout: 0.3               # Stochastic dimension cut enforcing ordered representation
+edl_weight: 0.5
+edl_anneal_epochs: 10

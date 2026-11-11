@@ -1,0 +1,1031 @@
+{
+  "metadata": {
+    "report_name": "Phase 6 Experiment 2 Client Progress Summary",
+    "generated_date": "2026-10-29",
+    "project": "CDCo-MambaNet (ABIDE I Cohort, N=284)",
+    "status": "Interim Progress (Seeds 0 and 1 Complete; Seeds 2, 3, 4 Pending Host Training)"
+  },
+  "completed_seeds": {
+    "seed_0": {
+      "checkpoint_path": "result/phase6_experiment2_novelty/10-28-13-02-58/best_model.pt",
+      "best_val_epoch": 6,
+      "best_val_metrics_ensemble": {
+        "accuracy": 0.6551724137931034,
+        "specificity": 0.5333333333333333,
+        "sensitivity": 0.7857142857142857,
+        "balanced_accuracy": 0.6595238095238095,
+        "f1": 0.6514423076923077,
+        "auc": 0.6952380952380952,
+        "confusion_matrix": [
+          [
+            8,
+            7
+          ],
+          [
+            3,
+            11
+          ]
+        ],
+        "precision_asd": 0.6111111111111112,
+        "recall_asd": 0.7857142857142857,
+        "precision_control": 0.7272727272727273,
+        "recall_control": 0.5333333333333333
+      },
+      "test_metrics_at_best_val_ensemble": {
+        "accuracy": 0.6428571428571429,
+        "specificity": 0.42857142857142855,
+        "sensitivity": 0.8571428571428571,
+        "balanced_accuracy": 0.6428571428571428,
+        "f1": 0.625668449197861,
+        "auc": 0.5663265306122449,
+        "confusion_matrix": [
+          [
+            6,
+            8
+          ],
+          [
+            2,
+            12
+          ]
+        ],
+        "precision_asd": 0.6,
+        "recall_asd": 0.8571428571428571,
+        "precision_control": 0.75,
+        "recall_control": 0.42857142857142855
+      },
+      "test_metrics_at_best_val_head1": {
+        "accuracy": 0.5357142857142857,
+        "specificity": 0.35714285714285715,
+        "sensitivity": 0.7142857142857143,
+        "balanced_accuracy": 0.5357142857142857,
+        "f1": 0.5204216073781291,
+        "auc": 0.4897959183673469,
+        "confusion_matrix": [
+          [
+            5,
+            9
+          ],
+          [
+            4,
+            10
+          ]
+        ],
+        "precision_asd": 0.5263157894736842,
+        "recall_asd": 0.7142857142857143,
+        "precision_control": 0.5555555555555556,
+        "recall_control": 0.35714285714285715
+      },
+      "test_metrics_at_best_val_head2": {
+        "accuracy": 0.42857142857142855,
+        "specificity": 0.07142857142857142,
+        "sensitivity": 0.7857142857142857,
+        "balanced_accuracy": 0.42857142857142855,
+        "f1": 0.3450292397660819,
+        "auc": 0.5663265306122449,
+        "confusion_matrix": [
+          [
+            1,
+            13
+          ],
+          [
+            3,
+            11
+          ]
+        ],
+        "precision_asd": 0.4583333333333333,
+        "recall_asd": 0.7857142857142857,
+        "precision_control": 0.25,
+        "recall_control": 0.07142857142857142
+      },
+      "test_metrics_at_final_epoch": {
+        "accuracy": 0.5714285714285714,
+        "specificity": 0.5714285714285714,
+        "sensitivity": 0.5714285714285714,
+        "balanced_accuracy": 0.5714285714285714,
+        "f1": 0.5714285714285714,
+        "auc": 0.5153061224489797,
+        "confusion_matrix": [
+          [
+            8,
+            6
+          ],
+          [
+            6,
+            8
+          ]
+        ],
+        "precision_asd": 0.5714285714285714,
+        "recall_asd": 0.5714285714285714,
+        "precision_control": 0.5714285714285714,
+        "recall_control": 0.5714285714285714
+      },
+      "hybrid_model_l2_test": {
+        "accuracy": 0.6785714285714286,
+        "balanced_accuracy": 0.6785714285714286,
+        "sensitivity": 0.7857142857142857,
+        "specificity": 0.5714285714285714,
+        "f1": 0.7096774193548387,
+        "auc": 0.6785714285714286,
+        "confusion_matrix": [
+          [
+            8,
+            6
+          ],
+          [
+            3,
+            11
+          ]
+        ]
+      },
+      "hybrid_model_ridge_test": {
+        "accuracy": 0.6428571428571429,
+        "balanced_accuracy": 0.6428571428571429,
+        "sensitivity": 0.6428571428571429,
+        "specificity": 0.6428571428571429,
+        "f1": 0.6428571428571429,
+        "auc": 0.653061224489796,
+        "confusion_matrix": [
+          [
+            9,
+            5
+          ],
+          [
+            5,
+            9
+          ]
+        ]
+      },
+      "deep_alone_l2_test": {
+        "accuracy": 0.5,
+        "balanced_accuracy": 0.5,
+        "sensitivity": 0.5714285714285714,
+        "specificity": 0.42857142857142855,
+        "f1": 0.5333333333333333,
+        "auc": 0.5306122448979591,
+        "confusion_matrix": [
+          [
+            6,
+            8
+          ],
+          [
+            6,
+            8
+          ]
+        ]
+      },
+      "deep_alone_ridge_test": {
+        "accuracy": 0.6071428571428571,
+        "balanced_accuracy": 0.6071428571428572,
+        "sensitivity": 0.6428571428571429,
+        "specificity": 0.5714285714285714,
+        "f1": 0.6206896551724138,
+        "auc": 0.5663265306122449,
+        "confusion_matrix": [
+          [
+            8,
+            6
+          ],
+          [
+            5,
+            9
+          ]
+        ]
+      }
+    },
+    "seed_1": {
+      "checkpoint_path": "result/phase6_multiseed/runs/seed1/seed_1/best_model.pt",
+      "best_val_epoch": 6,
+      "best_val_metrics_ensemble": {
+        "accuracy": 0.6896551724137931,
+        "specificity": 0.7333333333333333,
+        "sensitivity": 0.6428571428571429,
+        "balanced_accuracy": 0.6880952380952381,
+        "f1": 0.6881720430107527,
+        "auc": 0.6142857142857143,
+        "confusion_matrix": [
+          [
+            11,
+            4
+          ],
+          [
+            5,
+            9
+          ]
+        ],
+        "precision_asd": 0.6923076923076923,
+        "recall_asd": 0.6428571428571429,
+        "precision_control": 0.6875,
+        "recall_control": 0.7333333333333333
+      },
+      "test_metrics_at_best_val_ensemble": {
+        "accuracy": 0.5,
+        "specificity": 0.5714285714285714,
+        "sensitivity": 0.42857142857142855,
+        "balanced_accuracy": 0.5,
+        "f1": 0.49743589743589745,
+        "auc": 0.5255102040816326,
+        "confusion_matrix": [
+          [
+            8,
+            6
+          ],
+          [
+            8,
+            6
+          ]
+        ],
+        "precision_asd": 0.5,
+        "recall_asd": 0.42857142857142855,
+        "precision_control": 0.5,
+        "recall_control": 0.5714285714285714
+      },
+      "test_metrics_at_best_val_head1": {
+        "accuracy": 0.5357142857142857,
+        "specificity": 0.5714285714285714,
+        "sensitivity": 0.5,
+        "balanced_accuracy": 0.5357142857142857,
+        "f1": 0.5351213282247764,
+        "auc": 0.5306122448979592,
+        "confusion_matrix": [
+          [
+            8,
+            6
+          ],
+          [
+            7,
+            7
+          ]
+        ],
+        "precision_asd": 0.5384615384615384,
+        "recall_asd": 0.5,
+        "precision_control": 0.5333333333333333,
+        "recall_control": 0.5714285714285714
+      },
+      "test_metrics_at_best_val_head2": {
+        "accuracy": 0.4642857142857143,
+        "specificity": 0.5,
+        "sensitivity": 0.42857142857142855,
+        "balanced_accuracy": 0.4642857142857143,
+        "f1": 0.46360153256704983,
+        "auc": 0.4897959183673469,
+        "confusion_matrix": [
+          [
+            7,
+            7
+          ],
+          [
+            8,
+            6
+          ]
+        ],
+        "precision_asd": 0.46153846153846156,
+        "recall_asd": 0.42857142857142855,
+        "precision_control": 0.4666666666666667,
+        "recall_control": 0.5
+      },
+      "test_metrics_at_final_epoch": {
+        "accuracy": 0.5714285714285714,
+        "specificity": 0.5714285714285714,
+        "sensitivity": 0.5714285714285714,
+        "balanced_accuracy": 0.5714285714285714,
+        "f1": 0.5714285714285714,
+        "auc": 0.48469387755102034,
+        "confusion_matrix": [
+          [
+            8,
+            6
+          ],
+          [
+            6,
+            8
+          ]
+        ],
+        "precision_asd": 0.5714285714285714,
+        "recall_asd": 0.5714285714285714,
+        "precision_control": 0.5714285714285714,
+        "recall_control": 0.5714285714285714
+      },
+      "hybrid_model_l2_test": {
+        "accuracy": 0.6428571428571429,
+        "balanced_accuracy": 0.6428571428571428,
+        "sensitivity": 0.5,
+        "specificity": 0.7857142857142857,
+        "f1": 0.5833333333333334,
+        "auc": 0.6122448979591837,
+        "confusion_matrix": [
+          [
+            11,
+            3
+          ],
+          [
+            7,
+            7
+          ]
+        ]
+      },
+      "hybrid_model_ridge_test": {
+        "accuracy": 0.6071428571428571,
+        "balanced_accuracy": 0.6071428571428572,
+        "sensitivity": 0.5714285714285714,
+        "specificity": 0.6428571428571429,
+        "f1": 0.5925925925925926,
+        "auc": 0.663265306122449,
+        "confusion_matrix": [
+          [
+            9,
+            5
+          ],
+          [
+            6,
+            8
+          ]
+        ]
+      },
+      "deep_alone_l2_test": {
+        "accuracy": 0.5357142857142857,
+        "balanced_accuracy": 0.5357142857142857,
+        "sensitivity": 0.5,
+        "specificity": 0.5714285714285714,
+        "f1": 0.5185185185185185,
+        "auc": 0.5255102040816326,
+        "confusion_matrix": [
+          [
+            8,
+            6
+          ],
+          [
+            7,
+            7
+          ]
+        ]
+      },
+      "deep_alone_ridge_test": {
+        "accuracy": 0.5357142857142857,
+        "balanced_accuracy": 0.5357142857142857,
+        "sensitivity": 0.5,
+        "specificity": 0.5714285714285714,
+        "f1": 0.5185185185185185,
+        "auc": 0.5306122448979592,
+        "confusion_matrix": [
+          [
+            8,
+            6
+          ],
+          [
+            7,
+            7
+          ]
+        ]
+      }
+    }
+  },
+  "baseline_controlled_run": {
+    "checkpoint_path": "result/controlled_run_resumed/10-26-23-09-22/best_model.pt",
+    "best_epoch": 8,
+    "val_metrics": {
+      "accuracy": 0.6206896551724138,
+      "balanced_accuracy": 0.6214285714285714,
+      "specificity": 0.6,
+      "sensitivity": 0.6428571428571429,
+      "f1": 0.6206896551724138,
+      "auc": 0.6190476190476191,
+      "confusion_matrix": [
+        [
+          9,
+          6
+        ],
+        [
+          5,
+          9
+        ]
+      ]
+    },
+    "test_metrics": {
+      "accuracy": 0.5,
+      "balanced_accuracy": 0.5,
+      "specificity": 0.5714285714285714,
+      "sensitivity": 0.42857142857142855,
+      "f1": 0.49743589743589745,
+      "auc": 0.5357142857142857,
+      "confusion_matrix": [
+        [
+          8,
+          6
+        ],
+        [
+          8,
+          6
+        ]
+      ],
+      "precision_asd": 0.5,
+      "recall_asd": 0.42857142857142855,
+      "precision_control": 0.5,
+      "recall_control": 0.5714285714285714
+    }
+  },
+  "classical_baselines_5_seeds": {
+    "seed_0": {
+      "LogisticRegression_L2": {
+        "best_C": 0.001,
+        "val": {
+          "accuracy": 0.5862068965517241,
+          "balanced_accuracy": 0.5833333333333333,
+          "sensitivity": 0.5,
+          "specificity": 0.6666666666666666,
+          "f1": 0.5384615384615384,
+          "auc": 0.5,
+          "confusion_matrix": [
+            [
+              10,
+              5
+            ],
+            [
+              7,
+              7
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.7142857142857143,
+          "balanced_accuracy": 0.7142857142857143,
+          "sensitivity": 0.7142857142857143,
+          "specificity": 0.7142857142857143,
+          "f1": 0.7142857142857143,
+          "auc": 0.653061224489796,
+          "confusion_matrix": [
+            [
+              10,
+              4
+            ],
+            [
+              4,
+              10
+            ]
+          ]
+        }
+      },
+      "RidgeClassifier": {
+        "best_alpha": 5000.0,
+        "val": {
+          "accuracy": 0.5862068965517241,
+          "balanced_accuracy": 0.5833333333333333,
+          "sensitivity": 0.5,
+          "specificity": 0.6666666666666666,
+          "f1": 0.5384615384615384,
+          "auc": 0.5,
+          "confusion_matrix": [
+            [
+              10,
+              5
+            ],
+            [
+              7,
+              7
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.7142857142857143,
+          "balanced_accuracy": 0.7142857142857143,
+          "sensitivity": 0.7142857142857143,
+          "specificity": 0.7142857142857143,
+          "f1": 0.7142857142857143,
+          "auc": 0.6479591836734695,
+          "confusion_matrix": [
+            [
+              10,
+              4
+            ],
+            [
+              4,
+              10
+            ]
+          ]
+        }
+      },
+      "LinearSVC": {
+        "best_C": 0.0001,
+        "val": {
+          "accuracy": 0.5862068965517241,
+          "balanced_accuracy": 0.5833333333333333,
+          "sensitivity": 0.5,
+          "specificity": 0.6666666666666666,
+          "f1": 0.5384615384615384,
+          "auc": 0.5,
+          "confusion_matrix": [
+            [
+              10,
+              5
+            ],
+            [
+              7,
+              7
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.7142857142857143,
+          "balanced_accuracy": 0.7142857142857143,
+          "sensitivity": 0.7142857142857143,
+          "specificity": 0.7142857142857143,
+          "f1": 0.7142857142857143,
+          "auc": 0.6479591836734695,
+          "confusion_matrix": [
+            [
+              10,
+              4
+            ],
+            [
+              4,
+              10
+            ]
+          ]
+        }
+      }
+    },
+    "seed_1": {
+      "LogisticRegression_L2": {
+        "best_C": 1e-05,
+        "val": {
+          "accuracy": 0.7241379310344828,
+          "balanced_accuracy": 0.719047619047619,
+          "sensitivity": 0.5714285714285714,
+          "specificity": 0.8666666666666667,
+          "f1": 0.6666666666666666,
+          "auc": 0.6190476190476191,
+          "confusion_matrix": [
+            [
+              13,
+              2
+            ],
+            [
+              6,
+              8
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.6428571428571429,
+          "balanced_accuracy": 0.6428571428571428,
+          "sensitivity": 0.5,
+          "specificity": 0.7857142857142857,
+          "f1": 0.5833333333333334,
+          "auc": 0.6479591836734695,
+          "confusion_matrix": [
+            [
+              11,
+              3
+            ],
+            [
+              7,
+              7
+            ]
+          ]
+        }
+      },
+      "RidgeClassifier": {
+        "best_alpha": 10000.0,
+        "val": {
+          "accuracy": 0.6896551724137931,
+          "balanced_accuracy": 0.6904761904761905,
+          "sensitivity": 0.7142857142857143,
+          "specificity": 0.6666666666666666,
+          "f1": 0.6896551724137931,
+          "auc": 0.6142857142857142,
+          "confusion_matrix": [
+            [
+              10,
+              5
+            ],
+            [
+              4,
+              10
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.6785714285714286,
+          "balanced_accuracy": 0.6785714285714286,
+          "sensitivity": 0.5714285714285714,
+          "specificity": 0.7857142857142857,
+          "f1": 0.64,
+          "auc": 0.7551020408163265,
+          "confusion_matrix": [
+            [
+              11,
+              3
+            ],
+            [
+              6,
+              8
+            ]
+          ]
+        }
+      },
+      "LinearSVC": {
+        "best_C": 1e-05,
+        "val": {
+          "accuracy": 0.6551724137931034,
+          "balanced_accuracy": 0.6547619047619048,
+          "sensitivity": 0.6428571428571429,
+          "specificity": 0.6666666666666666,
+          "f1": 0.6428571428571429,
+          "auc": 0.6238095238095238,
+          "confusion_matrix": [
+            [
+              10,
+              5
+            ],
+            [
+              5,
+              9
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.6785714285714286,
+          "balanced_accuracy": 0.6785714285714286,
+          "sensitivity": 0.6428571428571429,
+          "specificity": 0.7142857142857143,
+          "f1": 0.6666666666666666,
+          "auc": 0.7295918367346939,
+          "confusion_matrix": [
+            [
+              10,
+              4
+            ],
+            [
+              5,
+              9
+            ]
+          ]
+        }
+      }
+    },
+    "seed_2": {
+      "LogisticRegression_L2": {
+        "best_C": 10.0,
+        "val": {
+          "accuracy": 0.6551724137931034,
+          "balanced_accuracy": 0.6547619047619048,
+          "sensitivity": 0.6428571428571429,
+          "specificity": 0.6666666666666666,
+          "f1": 0.6428571428571429,
+          "auc": 0.6333333333333333,
+          "confusion_matrix": [
+            [
+              10,
+              5
+            ],
+            [
+              5,
+              9
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.6071428571428571,
+          "balanced_accuracy": 0.6071428571428572,
+          "sensitivity": 0.6428571428571429,
+          "specificity": 0.5714285714285714,
+          "f1": 0.6206896551724138,
+          "auc": 0.6428571428571429,
+          "confusion_matrix": [
+            [
+              8,
+              6
+            ],
+            [
+              5,
+              9
+            ]
+          ]
+        }
+      },
+      "RidgeClassifier": {
+        "best_alpha": 1000.0,
+        "val": {
+          "accuracy": 0.6896551724137931,
+          "balanced_accuracy": 0.6880952380952381,
+          "sensitivity": 0.6428571428571429,
+          "specificity": 0.7333333333333333,
+          "f1": 0.6666666666666666,
+          "auc": 0.6095238095238095,
+          "confusion_matrix": [
+            [
+              11,
+              4
+            ],
+            [
+              5,
+              9
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.5714285714285714,
+          "balanced_accuracy": 0.5714285714285714,
+          "sensitivity": 0.7142857142857143,
+          "specificity": 0.42857142857142855,
+          "f1": 0.625,
+          "auc": 0.6275510204081632,
+          "confusion_matrix": [
+            [
+              6,
+              8
+            ],
+            [
+              4,
+              10
+            ]
+          ]
+        }
+      },
+      "LinearSVC": {
+        "best_C": 0.001,
+        "val": {
+          "accuracy": 0.6206896551724138,
+          "balanced_accuracy": 0.6214285714285714,
+          "sensitivity": 0.6428571428571429,
+          "specificity": 0.6,
+          "f1": 0.6206896551724138,
+          "auc": 0.5809523809523809,
+          "confusion_matrix": [
+            [
+              9,
+              6
+            ],
+            [
+              5,
+              9
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.5714285714285714,
+          "balanced_accuracy": 0.5714285714285714,
+          "sensitivity": 0.7142857142857143,
+          "specificity": 0.42857142857142855,
+          "f1": 0.625,
+          "auc": 0.6071428571428571,
+          "confusion_matrix": [
+            [
+              6,
+              8
+            ],
+            [
+              4,
+              10
+            ]
+          ]
+        }
+      }
+    },
+    "seed_3": {
+      "LogisticRegression_L2": {
+        "best_C": 0.0001,
+        "val": {
+          "accuracy": 0.7241379310344828,
+          "balanced_accuracy": 0.7238095238095238,
+          "sensitivity": 0.7142857142857143,
+          "specificity": 0.7333333333333333,
+          "f1": 0.7142857142857143,
+          "auc": 0.7,
+          "confusion_matrix": [
+            [
+              11,
+              4
+            ],
+            [
+              4,
+              10
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.6428571428571429,
+          "balanced_accuracy": 0.6428571428571428,
+          "sensitivity": 0.5714285714285714,
+          "specificity": 0.7142857142857143,
+          "f1": 0.6153846153846154,
+          "auc": 0.6071428571428572,
+          "confusion_matrix": [
+            [
+              10,
+              4
+            ],
+            [
+              6,
+              8
+            ]
+          ]
+        }
+      },
+      "RidgeClassifier": {
+        "best_alpha": 10000.0,
+        "val": {
+          "accuracy": 0.6206896551724138,
+          "balanced_accuracy": 0.6238095238095238,
+          "sensitivity": 0.7142857142857143,
+          "specificity": 0.5333333333333333,
+          "f1": 0.6451612903225806,
+          "auc": 0.6190476190476191,
+          "confusion_matrix": [
+            [
+              8,
+              7
+            ],
+            [
+              4,
+              10
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.6071428571428571,
+          "balanced_accuracy": 0.6071428571428572,
+          "sensitivity": 0.7142857142857143,
+          "specificity": 0.5,
+          "f1": 0.6451612903225806,
+          "auc": 0.673469387755102,
+          "confusion_matrix": [
+            [
+              7,
+              7
+            ],
+            [
+              4,
+              10
+            ]
+          ]
+        }
+      },
+      "LinearSVC": {
+        "best_C": 1e-05,
+        "val": {
+          "accuracy": 0.7241379310344828,
+          "balanced_accuracy": 0.7238095238095238,
+          "sensitivity": 0.7142857142857143,
+          "specificity": 0.7333333333333333,
+          "f1": 0.7142857142857143,
+          "auc": 0.7142857142857143,
+          "confusion_matrix": [
+            [
+              11,
+              4
+            ],
+            [
+              4,
+              10
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.6785714285714286,
+          "balanced_accuracy": 0.6785714285714286,
+          "sensitivity": 0.6428571428571429,
+          "specificity": 0.7142857142857143,
+          "f1": 0.6666666666666666,
+          "auc": 0.6071428571428572,
+          "confusion_matrix": [
+            [
+              10,
+              4
+            ],
+            [
+              5,
+              9
+            ]
+          ]
+        }
+      }
+    },
+    "seed_4": {
+      "LogisticRegression_L2": {
+        "best_C": 10.0,
+        "val": {
+          "accuracy": 0.5172413793103449,
+          "balanced_accuracy": 0.519047619047619,
+          "sensitivity": 0.5714285714285714,
+          "specificity": 0.4666666666666667,
+          "f1": 0.5333333333333333,
+          "auc": 0.49047619047619045,
+          "confusion_matrix": [
+            [
+              7,
+              8
+            ],
+            [
+              6,
+              8
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.6071428571428571,
+          "balanced_accuracy": 0.6071428571428572,
+          "sensitivity": 0.5,
+          "specificity": 0.7142857142857143,
+          "f1": 0.56,
+          "auc": 0.663265306122449,
+          "confusion_matrix": [
+            [
+              10,
+              4
+            ],
+            [
+              7,
+              7
+            ]
+          ]
+        }
+      },
+      "RidgeClassifier": {
+        "best_alpha": 0.1,
+        "val": {
+          "accuracy": 0.5517241379310345,
+          "balanced_accuracy": 0.5523809523809524,
+          "sensitivity": 0.5714285714285714,
+          "specificity": 0.5333333333333333,
+          "f1": 0.5517241379310345,
+          "auc": 0.5047619047619047,
+          "confusion_matrix": [
+            [
+              8,
+              7
+            ],
+            [
+              6,
+              8
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.6428571428571429,
+          "balanced_accuracy": 0.6428571428571428,
+          "sensitivity": 0.5714285714285714,
+          "specificity": 0.7142857142857143,
+          "f1": 0.6153846153846154,
+          "auc": 0.6071428571428572,
+          "confusion_matrix": [
+            [
+              10,
+              4
+            ],
+            [
+              6,
+              8
+            ]
+          ]
+        }
+      },
+      "LinearSVC": {
+        "best_C": 0.001,
+        "val": {
+          "accuracy": 0.5172413793103449,
+          "balanced_accuracy": 0.519047619047619,
+          "sensitivity": 0.5714285714285714,
+          "specificity": 0.4666666666666667,
+          "f1": 0.5333333333333333,
+          "auc": 0.5047619047619047,
+          "confusion_matrix": [
+            [
+              7,
+              8
+            ],
+            [
+              6,
+              8
+            ]
+          ]
+        },
+        "test": {
+          "accuracy": 0.6428571428571429,
+          "balanced_accuracy": 0.6428571428571428,
+          "sensitivity": 0.5714285714285714,
+          "specificity": 0.7142857142857143,
+          "f1": 0.6153846153846154,
+          "auc": 0.6224489795918368,
+          "confusion_matrix": [
+            [
+              10,
+              4
+            ],
+            [
+              6,
+              8
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "missing_metrics": {
+    "pending_seeds": [
+      2,
+      3,
+      4
+    ],
+    "reason": "Awaiting sequential host-side training to bypass Windows Low-IL sandbox restriction on external drive E:"
+  }
+}
