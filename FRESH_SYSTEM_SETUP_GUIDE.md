@@ -93,18 +93,15 @@ VRAM (MB): 2048.0 (or higher)
 
 ---
 
-## 5. Instant Smoke Test (No Dataset Needed)
+## 5. Instant Safe Verification (Zero Patient Data Accessed)
 
-The repository includes a bundled test cohort (`demo/abide_seed0_test.npz`) and unit tests that run immediately without downloading the full ABIDE dataset.
+To verify model initialization, GPU/CPU execution, and forward/backward passes without touching real patient data, run:
 
-### Test 1: Run Architecture Unit Test
 ```powershell
-python tests/test_cdcomnet_v4.py
+python tools/safe_fresh_system_check.py
 ```
-*Verifies model forward pass, unified dual-head evidential outputs, Dirichlet loss computation, and backpropagation gradient flow.*
 
-### Test 2: Run CPU Test Evaluation Demo
-```powershell
-python tools/demo.py
-```
-*Runs inference across the 28 held-out test subjects on CPU under clean and perturbed scanner conditions.*
+*This safe verification suite runs in under 10 seconds, tests complete deep learning autograd on synthetic random tensors, verifies gradient clipping, and checks participant split JSON integrity without ever touching held-out patient data.*
+
+> [!WARNING]
+> **Test Set Quarantine Notice:** The legacy `tools/demo.py` script accesses real held-out patient data (`demo/abide_seed0_test.npz`) and should NOT be used as a routine smoke test. Real test data must remain quarantined until final, frozen evaluation.

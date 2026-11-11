@@ -14,12 +14,24 @@ python -m venv .venv
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements.txt
 
-# 3. Run instant architecture unit test (no dataset needed)
-python tests/test_cdcomnet_v4.py
-
-# 4. Run instant test set evaluation demo on CPU (uses bundled demo/ test cohort)
-python tools/demo.py
+# 3. Run safe fresh-system verification (100% synthetic, zero patient data accessed)
+python tools/safe_fresh_system_check.py
 ```
+
+---
+
+## Benchmark Progression & Results Overview
+
+| Architecture & Benchmark | Total Parameters | Checkpoint Selection | Held-Out Test Accuracy | Status | Reference |
+| :--- | :---: | :--- | :---: | :---: | :--- |
+| **Original Repaired Baseline** | 27,729,262 | Final Epoch (Epoch 100, 5 seeds) | **55.00 ± 7.82%** | Historical Baseline | Kaggle 5-seed run |
+| **CDCo-MambaNet V2 (E2)** | 27,811,311 | Minimum Val Loss (Seed 0) | **39.29%** | Historical Ablation | [E2 Report](E2_Seed0_Training_Report.md) |
+| **CDCo-MambaNet V3 (E3)** | 3,202,271 | Minimum Val Loss (Seed 0) | **64.29%** (Head 1) | Historical Benchmark | [E3 Review](E3_Final_Review_For_Research.md) |
+| **CDCo-MambaNet V4 (E4)** | **3,226,317** | **Minimum Val Loss (Epoch 1, Seed 0)** | **64.29%** | Historical Benchmark | [E4 Review](E4_Seed0_Scientific_Review.md) |
+| **Phase 2 Research (E1–E5)**| 3,226,317 | Minimum Val Loss (30 Epochs) | *Unmeasured* | Ready (Pending Execution) | [Phase 2 Configs](PHASE2_CONFIGS.yaml) |
+
+> [!NOTE]
+> Detailed results reconciliation between the 100-epoch Kaggle baseline and the E4 Seed-0 minimum validation loss benchmark is documented in [README_RESULT_RECONCILIATION.md](README_RESULT_RECONCILIATION.md). Phase 2 performance is currently unmeasured as no experiments have yet run.
 
 ---
 
