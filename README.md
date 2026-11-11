@@ -1,5 +1,28 @@
 # CDCo-MambaNet on ABIDE: Reproduction and Reliability-Gated Fusion
 
+> [!TIP]
+> **Fresh System / ZIP Download?** See the [Fresh System Setup Guide](FRESH_SYSTEM_SETUP_GUIDE.md), [Dataset Setup Guide](DATASET_SETUP_GUIDE.md), and [Execution Commands Cheat Sheet](EXECUTION_COMMANDS.md) for quick-start setup.
+
+## Quick Start on a Fresh Windows Machine
+
+```powershell
+# 1. Create and activate virtual environment
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# 2. Install PyTorch (CUDA 11.8 or CPU) and dependencies
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install -r requirements.txt
+
+# 3. Run instant architecture unit test (no dataset needed)
+python tests/test_cdcomnet_v4.py
+
+# 4. Run instant test set evaluation demo on CPU (uses bundled demo/ test cohort)
+python tools/demo.py
+```
+
+---
+
 This project reproduces **CDCo-MambaNet**, a multimodal (sMRI + fMRI) brain-disorder classifier, on public
 ABIDE I data and extends it with a **reliability-gated fusion** meant to keep working when one scan is missing
 or corrupted. It builds on the authors' code ([NewWr/CDCo-MambaNet](https://github.com/NewWr/CDCo-MambaNet),
