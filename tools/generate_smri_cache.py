@@ -18,11 +18,22 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dataset.abide import load_abide_data
 from dataset.data_argument import random_rotate_3d, random_erase_3d
 
-def generate_cache_for_seed(seed, dataset_path="E:/abide_data/abide_284.npy", out_cache=None):
+def generate_cache_for_seed(seed, dataset_path="E:/abide_data/abide_284.npy", out_cache=None, split_path=None):
     if out_cache is None:
         out_cache = f"E:/abide_data/train_aug_smri_seed{seed}.npy"
         
-    split_path = f"result/phase6_multiseed/splits/exact_splits_seed{seed}.json"
+    if split_path is None:
+        candidate_splits = [
+            f"result/phase6_multiseed/splits/exact_splits_seed{seed}.json",
+            f"splits/exact_splits_seed{seed}.json"
+        ]
+        for p in candidate_splits:
+            if os.path.exists(p):
+                split_path = p
+                break
+        if split_path is None:
+            split_path = candidate_splits[0]
+
     if not os.path.exists(split_path):
         raise FileNotFoundError(f"Missing split file: {split_path}")
         
@@ -76,12 +87,28 @@ def generate_cache_for_seed(seed, dataset_path="E:/abide_data/abide_284.npy", ou
 
 def main():
     parser = argparse.ArgumentParser(description="Pre-generate sMRI augmentation caches for multi-seed runs")
-    parser.add_argument("--seeds", type=int, nargs="+", default=[2, 3, 4], help="Seeds to generate caches for")
+    parser.add_argument("--seed", type=int, default=None, help="Single seed to generate cache for (e.g. 0)")
+    parser.add_argument("--seeds", type=int, nargs="+", default=None, help="Seeds to generate caches for")
+    parser.add_argument("--dataset_path", type=str, default="E:/abide_data/abide_284.npy", help="Path to abide_284.npy")
+    parser.add_argument("--out_cache", type=str, default=None, help="Custom output path for generated cache .npy")
+    parser.add_argument("--split_path", type=str, default=None, help="Path to exact split JSON file")
     args = parser.parse_args()
     
-    print("Pre-generating sMRI caches for seeds:", args.seeds)
-    for s in args.seeds:
-        generate_cache_for_seed(s)
+    if args.seed is not None:
+        target_seeds = [args.seed]
+    elif args.seeds is not None:
+        target_seeds = args.seeds
+    else:
+        target_seeds = [2, 3, 4]
+
+    print("Pre-generating sMRI caches for seeds:", target_seeds)
+    for s in target_seeds:
+        generate_cache_for_seed(
+            s,
+            dataset_path=args.dataset_path,
+            out_cache=args.out_cache if len(target_seeds) == 1 else None,
+            split_path=args.split_path
+        )
     print("\nAll requested caches ready!")
 
 if __name__ == "__main__":

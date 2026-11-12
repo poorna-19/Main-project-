@@ -48,9 +48,9 @@ When you explicitly authorize training, execute experiments using their isolated
 
 ### Run E1: Scheduler Cadence Benchmark (57 updates/epoch, Monotonic Cosine Decay)
 ```powershell
-python tools/run_e4_seed0_benchmark.py
+python __main__.py model=cdcomambanet_v4_unified dataset=ABIDE_lowmem optimizer=adamw_e1_cos training=e1_training dataset.path="E:/abide_data/abide_284.npy" dataset.aug_cache="E:/abide_data/train_aug_smri.npy" dataset.exact_splits_path="splits/exact_splits_seed0.json" repeat_time=1 seed=0 log_path="result/phase2_experiments/E1_lr_cosine"
 ```
-*(Uses isolated config, freezes validation model selection, logs 57 updates/epoch).*
+*(Uses isolated config, freezes validation model selection, logs 57 updates/epoch, monotonic cosine decay).*
 
 ### Run Experiment with Custom Dataset Path
 ```powershell

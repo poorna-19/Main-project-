@@ -87,11 +87,31 @@ class Train:
         OmegaConf.save(self.config, self.save_path / "config.yaml")
         self.save_learnable_graph = cfg.save_learnable_graph
 
+        self.start_epoch = 0
+        self.resume_state = None
         if self.config.training.get('resume_checkpoint'):
             ckpt_path = self.config.training.resume_checkpoint
             if os.path.exists(ckpt_path):
-                self.model.load_state_dict(torch.load(ckpt_path))
-                self.logger.info(f"Successfully resumed model weights from: {ckpt_path}")
+                loaded_obj = torch.load(ckpt_path, map_location='cpu')
+                if isinstance(loaded_obj, dict) and 'model_state_dict' in loaded_obj:
+                    # Complete training state checkpoint (model, optimizer, scheduler, epoch, update counters)
+                    self.model.load_state_dict(loaded_obj['model_state_dict'])
+                    if self.optimizers and 'optimizer_state_dict' in loaded_obj:
+                        try:
+                            self.optimizers[0].load_state_dict(loaded_obj['optimizer_state_dict'])
+                        except Exception as e:
+                            self.logger.warning(f"Could not restore optimizer state: {e}")
+                    self.optimizer_step = loaded_obj.get('optimizer_step', 0)
+                    self.current_step = loaded_obj.get('current_step', 0)
+                    self.start_epoch = loaded_obj.get('epoch', 0)
+                    if self.lr_schedulers and 'lr' in loaded_obj:
+                        self.lr_schedulers[0].lr = loaded_obj['lr']
+                    self.resume_state = loaded_obj
+                    self.logger.info(f"Successfully resumed COMPLETE training state from: {ckpt_path} (epoch {self.start_epoch}, optimizer step {self.optimizer_step})")
+                else:
+                    # Model weights only (e.g. historical best_model.pt)
+                    self.model.load_state_dict(loaded_obj)
+                    self.logger.info(f"Successfully resumed model weights from: {ckpt_path}")
                 shutil.copy2(ckpt_path, self.save_path / "best_model.pt")
                 shutil.copy2(ckpt_path, self.save_path / "model.npy")
             else:
@@ -279,8 +299,10 @@ class Train:
 
     def train(self):
         training_process = []
-        self.current_step = 0
-        self.optimizer_step = 0
+        start_epoch = getattr(self, 'start_epoch', 0)
+        if start_epoch == 0:
+            self.current_step = 0
+            self.optimizer_step = 0
         
         best_val_epoch = 0
         best_epoch_metrics = {}
@@ -292,7 +314,16 @@ class Train:
 
         self.logger.info(f"Checkpoint Selection Metric: {checkpoint_metric} (Strictly Validation-Only)")
 
-        if self.config.training.get('resume_checkpoint'):
+        if getattr(self, 'resume_state', None):
+            rs = self.resume_state
+            best_val_epoch = rs.get('best_val_epoch', best_val_epoch)
+            max_val_metric = rs.get('max_val_metric', max_val_metric)
+            best_val_tie_breaker = rs.get('best_val_tie_breaker', best_val_tie_breaker)
+            best_epoch_metrics = rs.get('best_epoch_metrics', best_epoch_metrics)
+            no_improvement_count = rs.get('no_improvement_count', no_improvement_count)
+            training_process = rs.get('training_process', [])
+            self.logger.info(f"Resumed complete training loop state: epoch {start_epoch+1}/{self.epochs}, optimizer step {self.optimizer_step}, best_val_epoch={best_val_epoch+1}, best score={max_val_metric:.4f}")
+        elif self.config.training.get('resume_checkpoint'):
             metrics_path = Path(self.config.training.resume_checkpoint).parent / "best_val_metrics.npy"
             if metrics_path.exists():
                 try:
@@ -304,7 +335,7 @@ class Train:
                 except Exception as e:
                     self.logger.warning(f"Could not load previous best_val_metrics: {e}")
 
-        for epoch in range(self.epochs):
+        for epoch in range(start_epoch, self.epochs):
             self.model.epoch = epoch
             self.epoch = epoch
             self.reset_meters()
@@ -396,6 +427,23 @@ class Train:
             # Save progress incrementally on each epoch
             self.save_path.mkdir(exist_ok=True, parents=True)
             json.dump(training_process, open(self.save_path / "epoch_history.json", "w"), indent=2, default=float)
+
+            # Save complete training state checkpoint for exact resumption
+            training_state = {
+                "epoch": epoch + 1,
+                "model_state_dict": self.model.state_dict(),
+                "optimizer_state_dict": self.optimizers[0].state_dict() if self.optimizers else None,
+                "optimizer_step": self.optimizer_step,
+                "current_step": self.current_step,
+                "lr": getattr(self.lr_schedulers[0], 'lr', self.optimizers[0].param_groups[0]['lr']) if (self.lr_schedulers and self.optimizers) else None,
+                "best_val_epoch": best_val_epoch,
+                "max_val_metric": max_val_metric,
+                "best_val_tie_breaker": best_val_tie_breaker,
+                "best_epoch_metrics": best_epoch_metrics,
+                "no_improvement_count": no_improvement_count,
+                "training_process": training_process,
+            }
+            torch.save(training_state, self.save_path / "last_checkpoint.pt")
 
             # Early stopping check (enforced strictly on validation metric)
             if early_stopping_patience is not None and no_improvement_count >= early_stopping_patience:

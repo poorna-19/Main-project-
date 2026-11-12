@@ -22,16 +22,19 @@ Google Colab provides an isolated cloud environment with an **NVIDIA Tesla T4 GP
 from google.colab import drive
 import os
 
-# Mount Google Drive to persist checkpoints
+# Mount Google Drive to persist checkpoints and logs live
 drive.mount('/content/drive')
 
 # Create research folder in Google Drive
 DRIVE_OUTPUT_DIR = "/content/drive/MyDrive/CDCo_Mamba_Research_Results"
 os.makedirs(DRIVE_OUTPUT_DIR, exist_ok=True)
 
-# Clone repository from GitHub
-!git clone https://github.com/poorna-19/Main-project-.git /content/CDCO-Mamba-Research
-%cd /content/CDCO-Mamba-Research
+# Clone repository from GitHub (handles runtime restarts safely)
+REPO_DIR = "/content/CDCO-Mamba-Research"
+if not os.path.exists(REPO_DIR):
+    !git clone https://github.com/poorna-19/Main-project-.git {REPO_DIR}
+%cd {REPO_DIR}
+!git checkout improved-fixes
 ```
 
 ---
@@ -90,33 +93,51 @@ The ABIDE dataset can be loaded in one of two ways:
 !python tools/generate_smri_cache.py \
     --seed 0 \
     --dataset_path /content/data/abide/abide_284.npy \
-    --out_cache /content/data/abide/train_aug_smri.npy
+    --out_cache /content/data/abide/train_aug_smri.npy \
+    --split_path splits/exact_splits_seed0.json
 ```
 
 ---
 
-### Cell 7: Launch Phase 2 Controlled Training (Upon Explicit Authorization)
+### Cell 7: Launch Phase 2 Experiment E1 (Upon Explicit Authorization)
 ```bash
-export WANDB_MODE=disabled
+%env WANDB_MODE=disabled
 
-# Execute E1: Scheduler Cadence Benchmark (57 updates/epoch, monotonic cosine decay)
+# Execute E1: Scheduler Cadence Benchmark (30 epochs, 171 warmup steps, 1710 total steps, 57 updates/epoch, accum 8, val_loss selection)
 python __main__.py \
     model=cdcomambanet_v4_unified \
     dataset=ABIDE_lowmem \
+    optimizer=adamw_e1_cos \
+    training=e1_training \
     dataset.path="/content/data/abide/abide_284.npy" \
     dataset.aug_cache="/content/data/abide/train_aug_smri.npy" \
     dataset.exact_splits_path="splits/exact_splits_seed0.json" \
-    training.epochs=30 \
-    training.accumulate_grad_batches=8 \
-    log_path="/content/drive/MyDrive/CDCo_Mamba_Research_Results/phase2_experiments"
+    repeat_time=1 seed=0 \
+    log_path="/content/drive/MyDrive/CDCo_Mamba_Research_Results/phase2_experiments/E1_lr_cosine"
 ```
 
 ---
 
-### Cell 8: Copy Final Reports & Metrics to Google Drive
+### Cell 8: Resume Training from Checkpoint (In Case of Colab Free Disconnect)
 ```bash
-# Ensure all deliverables are backed up to Google Drive
-!cp -r result/phase2_experiments /content/drive/MyDrive/CDCo_Mamba_Research_Results/
-!cp -r reports/Phase2 /content/drive/MyDrive/CDCo_Mamba_Research_Results/
-print("Training deliverables successfully preserved in Google Drive.")
+%env WANDB_MODE=disabled
+
+python __main__.py \
+    model=cdcomambanet_v4_unified \
+    dataset=ABIDE_lowmem \
+    optimizer=adamw_e1_cos \
+    training=e1_training \
+    dataset.path="/content/data/abide/abide_284.npy" \
+    dataset.aug_cache="/content/data/abide/train_aug_smri.npy" \
+    dataset.exact_splits_path="splits/exact_splits_seed0.json" \
+    training.resume_checkpoint="/content/drive/MyDrive/CDCo_Mamba_Research_Results/phase2_experiments/E1_lr_cosine/seed_0/last_checkpoint.pt" \
+    repeat_time=1 seed=0 \
+    log_path="/content/drive/MyDrive/CDCo_Mamba_Research_Results/phase2_experiments/E1_lr_cosine"
+```
+
+---
+
+### Cell 9: Verify Google Drive Deliverables
+```bash
+!ls -lh /content/drive/MyDrive/CDCo_Mamba_Research_Results/phase2_experiments/E1_lr_cosine/seed_0/
 ```

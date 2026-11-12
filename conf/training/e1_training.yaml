@@ -1,0 +1,11 @@
+name: Train
+epochs: 30
+accumulate_grad_batches: 8  # 2 * 8 = effective batch 16 (57 optimizer updates/epoch)
+corrupt_p_missing: 0.0
+corrupt_p_noise: 0.0
+corrupt_max_sigma: 1.0
+robustness_eval: false
+max_batches: null
+early_stopping_patience: 5
+checkpoint_metric: val_loss  # Strictly validation-loss-based checkpoint selection
+resume_checkpoint: null
